@@ -1,0 +1,49 @@
+:root {
+  --bg: #f4f7f3;
+  --panel: #ffffff;
+  --text: #243026;
+  --muted: #66736a;
+  --line: #dce5dc;
+  --primary: #176b5d;
+  --primary-dark: #0f4b42;
+  --accent: #d88b2d;
+  --soft: #e9f1ec;
+  --shadow: 0 24px 60px rgba(31, 48, 39, 0.12);
+
+  font-family:
+    "Microsoft YaHei",
+    "PingFang SC",
+    "Noto Sans SC",
+    system-ui,
+    sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#app {
+  min-height: 100vh;
+}
