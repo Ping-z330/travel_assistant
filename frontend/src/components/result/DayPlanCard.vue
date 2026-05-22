@@ -2,36 +2,53 @@
 import type { DayPlan } from '../../types/trip'
 import AttractionCard from './AttractionCard.vue'
 
-defineProps<{
+const props = defineProps<{
   day: DayPlan
 }>()
+
+const getWeatherIcon = (weatherText: string) => {
+  const text = weatherText.trim()
+
+  if (text.includes('雷')) return '⛈️'
+  if (text.includes('雪')) return '❄️'
+  if (text.includes('雨')) return '🌧️'
+  if (text.includes('阴')) return '☁️'
+  if (text.includes('云')) return '⛅'
+  if (text.includes('晴')) return '☀️'
+  if (text.includes('风')) return '💨'
+
+  return '🌤️'
+}
 </script>
 
 <template>
   <article class="day-card">
     <div class="day-index">
       <span>Day</span>
-      <strong>{{ day.day }}</strong>
+      <strong>{{ props.day.day }}</strong>
     </div>
 
     <div class="day-content">
       <header class="day-header">
         <div>
-          <p class="day-label">第 {{ day.day }} 天</p>
-          <h2>{{ day.title }}</h2>
+          <p class="day-label">第 {{ props.day.day }} 天</p>
+          <h2>{{ props.day.title }}</h2>
         </div>
         <div class="weather-pill">
-          {{ day.weather.weather }} / {{ day.weather.temperature }}
+          <span class="weather-icon" aria-hidden="true">
+            {{ getWeatherIcon(props.day.weather.weather) }}
+          </span>
+          <span>{{ props.day.weather.weather }} / {{ props.day.weather.temperature }}</span>
         </div>
       </header>
 
-      <p class="weather-note">{{ day.weather.suggestion }}</p>
+      <p class="weather-note">{{ props.day.weather.suggestion }}</p>
 
       <div class="section-block">
         <h3>景点安排</h3>
         <div class="attraction-list">
           <AttractionCard
-            v-for="attraction in day.attractions"
+            v-for="attraction in props.day.attractions"
             :key="attraction.name"
             :attraction="attraction"
           />
@@ -40,17 +57,27 @@ defineProps<{
 
       <div class="day-side-grid">
         <div class="section-block">
-          <h3>酒店推荐</h3>
-          <p>
-            <strong>{{ day.hotel.name }}</strong>
-            <span>{{ day.hotel.price }} 元</span>
-          </p>
-          <p>{{ day.hotel.description }}</p>
+          <h3>🏨 酒店推荐</h3>
+          <div class="info-card info-card--hotel">
+            <div class="info-card-header info-card-header--hotel">
+              <p class="info-title">{{ props.day.hotel.name }}</p>
+              <span class="info-price-tag">¥{{ props.day.hotel.price }} / 晚</span>
+            </div>
+            <p class="info-subtext">{{ props.day.hotel.address }}</p>
+            <p>{{ props.day.hotel.description }}</p>
+          </div>
         </div>
 
         <div class="section-block">
-          <h3>餐饮建议</h3>
-          <p>{{ day.meals.join(' / ') }}</p>
+          <h3>🍜 餐饮建议</h3>
+          <div class="info-card info-card--meals">
+            <div class="meal-tags">
+              <span v-for="meal in props.day.meals" :key="meal" class="meal-tag">
+                {{ meal }}
+              </span>
+            </div>
+            <p>优先安排本地特色餐饮，并兼顾景点周边步行可达的用餐选择。</p>
+          </div>
         </div>
       </div>
     </div>
@@ -119,12 +146,20 @@ defineProps<{
 
 .weather-pill {
   flex: 0 0 auto;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
   padding: 8px 12px;
   color: var(--primary-dark);
   background: var(--soft);
   border-radius: 999px;
   font-size: 14px;
   font-weight: 800;
+}
+
+.weather-icon {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .weather-note {
@@ -150,14 +185,6 @@ defineProps<{
   line-height: 1.7;
 }
 
-.section-block strong {
-  color: var(--text);
-}
-
-.section-block span {
-  color: var(--muted);
-}
-
 .attraction-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -165,12 +192,82 @@ defineProps<{
 }
 
 .day-side-grid {
+  display: grid;
+  gap: 18px;
   padding-top: 4px;
 }
 
+.info-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.info-card--hotel {
+  background: linear-gradient(180deg, #fffaf1, #ffffff);
+}
+
+.info-card--meals {
+  background: linear-gradient(180deg, #f7fbf8, #ffffff);
+}
+
+.info-card-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.info-card-header--hotel {
+  justify-content: space-between;
+}
+
+.info-title {
+  color: var(--text) !important;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.info-subtext {
+  color: var(--primary-dark) !important;
+  font-size: 13px;
+}
+
+.info-price-tag {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  color: var(--primary-dark);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(23, 107, 93, 0.12);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.meal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meal-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  color: var(--primary-dark);
+  background: #ffffff;
+  border: 1px solid rgba(23, 107, 93, 0.12);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 @media (max-width: 860px) {
-  .day-card,
-  .day-side-grid {
+  .day-card {
     grid-template-columns: 1fr;
   }
 

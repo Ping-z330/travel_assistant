@@ -160,7 +160,27 @@ def build_trip_prompt(
 
 def parse_llm_trip_plan(content: str) -> TripPlan:
     data = json.loads(content)
+    _fill_missing_hotels(data)
     return TripPlan(**data)
+
+
+def _fill_missing_hotels(data: dict) -> None:
+    raw_days = data.get("days")
+    if not isinstance(raw_days, list):
+        return
+
+    for index, day in enumerate(raw_days, start=1):
+        if not isinstance(day, dict):
+            continue
+
+        if day.get("hotel") is None:
+            day["hotel"] = {
+                "name": "待补充酒店",
+                "address": "待补充地址",
+                "price": 0,
+                "description": f"第 {index} 天酒店信息暂缺，后续将使用兜底逻辑补全。",
+                "location": None,
+            }
 
 
 def normalize_trip_plan(

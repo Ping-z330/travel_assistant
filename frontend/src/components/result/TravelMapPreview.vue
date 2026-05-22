@@ -7,6 +7,17 @@ const props = defineProps<{
   tripPlan: TripPlan
 }>()
 
+type HotelPoint = {
+  startDay: number
+  endDay: number
+  name: string
+  address: string
+  price: number
+  longitude: number
+  latitude: number
+  color: string
+}
+
 const mapContainerRef = ref<HTMLElement | null>(null)
 const isMapReady = ref(false)
 const mapError = ref('')
@@ -19,10 +30,6 @@ const HOTEL_COLOR = '#c27c2c'
 
 const attractionCount = computed(() =>
   props.tripPlan.days.reduce((total, day) => total + day.attractions.length, 0),
-)
-
-const hotelCount = computed(() =>
-  props.tripPlan.days.filter((day) => day.hotel.location).length,
 )
 
 const dayRoutes = computed(() =>
@@ -43,19 +50,49 @@ const dayRoutes = computed(() =>
 
 const attractionPoints = computed(() => dayRoutes.value.flatMap((route) => route.points))
 
-const hotelPoints = computed(() =>
-  props.tripPlan.days
-    .filter((day) => day.hotel.location)
-    .map((day) => ({
-      day: day.day,
+const hotelPoints = computed<HotelPoint[]>(() => {
+  const merged: HotelPoint[] = []
+
+  props.tripPlan.days.forEach((day) => {
+    if (!day.hotel.location) {
+      return
+    }
+
+    const current: HotelPoint = {
+      startDay: day.day,
+      endDay: day.day,
       name: day.hotel.name,
       address: day.hotel.address,
       price: day.hotel.price,
-      longitude: day.hotel.location!.longitude,
-      latitude: day.hotel.location!.latitude,
+      longitude: day.hotel.location.longitude,
+      latitude: day.hotel.location.latitude,
       color: HOTEL_COLOR,
-    })),
-)
+    }
+
+    const previous = merged[merged.length - 1]
+    const isSameHotel =
+      previous &&
+      previous.name === current.name &&
+      previous.address === current.address &&
+      previous.longitude === current.longitude &&
+      previous.latitude === current.latitude &&
+      previous.endDay + 1 === current.startDay
+
+    if (isSameHotel) {
+      previous.endDay = current.endDay
+      return
+    }
+
+    merged.push(current)
+  })
+
+  return merged
+})
+
+const hotelCount = computed(() => hotelPoints.value.length)
+
+const formatStayRange = (startDay: number, endDay: number) =>
+  startDay === endDay ? `第 ${startDay} 天住宿点` : `第 ${startDay}-${endDay} 天连续入住`
 
 const clearMapOverlays = () => {
   if (!mapInstance || overlayInstances.length === 0) {
@@ -175,9 +212,9 @@ const renderMapOverlays = () => {
       content: `
         <div style="padding: 8px 10px; min-width: 240px; line-height: 1.7;">
           <strong>${hotel.name}</strong><br/>
-          <span style="color: ${hotel.color}; font-weight: 700;">第 ${hotel.day} 天住宿点</span><br/>
+          <span style="color: ${hotel.color}; font-weight: 700;">${formatStayRange(hotel.startDay, hotel.endDay)}</span><br/>
           <span>${hotel.address}</span><br/>
-          <span>参考价格：${hotel.price} 元</span>
+          <span>参考价格：${hotel.price} 元 / 晚</span>
         </div>
       `,
       offset: new AMap.Pixel(0, -26),
@@ -326,11 +363,11 @@ onUnmounted(() => {
       <div class="map-point-list" aria-label="住宿点位列表">
         <div
           v-for="hotel in hotelPoints"
-          :key="`${hotel.day}-${hotel.name}`"
+          :key="`${hotel.startDay}-${hotel.endDay}-${hotel.name}`"
           class="map-point-item"
         >
           <i class="point-color" :style="{ backgroundColor: hotel.color }"></i>
-          <span>第 {{ hotel.day }} 天</span>
+          <span>{{ formatStayRange(hotel.startDay, hotel.endDay) }}</span>
           <strong>{{ hotel.name }}</strong>
           <em>{{ hotel.longitude }}, {{ hotel.latitude }}</em>
         </div>
@@ -480,7 +517,7 @@ onUnmounted(() => {
 
 .map-point-item {
   display: grid;
-  grid-template-columns: 16px 80px minmax(0, 1fr) auto;
+  grid-template-columns: 16px 130px minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
