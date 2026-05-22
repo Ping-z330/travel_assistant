@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import TripResult from '../components/TripResult.vue'
 import type { TripPlan } from '../types/trip'
 
-// 从 sessionStorage 中获取旅行计划数据，如果没有则为 null
 const tripPlan = computed<TripPlan | null>(() => {
   const data = sessionStorage.getItem('tripPlan')
   return data ? JSON.parse(data) : null
@@ -11,7 +10,6 @@ const tripPlan = computed<TripPlan | null>(() => {
 </script>
 
 <template>
-    <!-- 旅行计划结果展示 -->
   <TripResult v-if="tripPlan" :trip-plan="tripPlan" />
 
   <main v-else class="empty-result">

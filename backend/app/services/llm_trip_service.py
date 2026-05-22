@@ -97,7 +97,7 @@ def build_trip_prompt(
 - 每一天建议包含 2 个景点。
 - 同一个主景点不要跨天重复使用。
 - 如果上面提供了真实景点候选，请优先从候选中选择景点，并尽量使用候选中的名称、地址和坐标。
-- 如果上面提供了真实酒店候选，请优先从候选中选择酒店，并尽量参考候选中的酒店名称、地址和预算建议。
+- 如果上面提供了真实酒店候选，请优先从候选中选择酒店，并尽量参考候选中的酒店名称、地址、预算建议和坐标。
 - 请根据天气信息安排室内外景点比例，遇到降雨时减少长时间户外活动。
 - 景点名称、地址、餐饮建议、酒店名称、预算数字要尽量真实合理。
 - 经纬度可以使用近似值，但优先使用候选中给出的真实坐标。
@@ -132,7 +132,11 @@ def build_trip_prompt(
         "name": "酒店名称",
         "address": "酒店地址",
         "price": 500,
-        "description": "推荐理由"
+        "description": "推荐理由",
+        "location": {{
+          "longitude": 116.397128,
+          "latitude": 39.916527
+        }}
       }},
       "weather": {{
         "date": "日期或第几天",
@@ -200,6 +204,7 @@ def normalize_trip_plan(
             not day.hotel.name.strip()
             or not day.hotel.address.strip()
             or day.hotel.price <= 0
+            or day.hotel.location is None
         ):
             day.hotel = _build_fallback_hotel(request.city, hotel_candidates)
 
@@ -236,7 +241,7 @@ def _normalize_attraction_name(name: str) -> str:
 
 
 def _build_fallback_day(day: int, city: str):
-    from app.models.trip import DayPlan, Hotel, WeatherInfo
+    from app.models.trip import DayPlan, Hotel, Location, WeatherInfo
 
     return DayPlan(
         day=day,
@@ -251,6 +256,7 @@ def _build_fallback_day(day: int, city: str):
             address=f"{city}交通便利区域",
             price=450,
             description="作为兜底住宿推荐，方便继续后续行程。",
+            location=Location(longitude=116.397128, latitude=39.916527),
         ),
         weather=WeatherInfo(
             date=f"第 {day} 天",
@@ -285,7 +291,7 @@ def _safe_search_attraction_image(name: str, city: str):
 
 
 def _build_fallback_hotel(city: str, hotel_candidates: list[HotelCandidate]):
-    from app.models.trip import Hotel
+    from app.models.trip import Hotel, Location
 
     if hotel_candidates:
         hotel = hotel_candidates[0]
@@ -294,6 +300,7 @@ def _build_fallback_hotel(city: str, hotel_candidates: list[HotelCandidate]):
             address=hotel.address or f"{city}核心区域",
             price=450,
             description=hotel.price_hint,
+            location=Location(longitude=hotel.longitude, latitude=hotel.latitude),
         )
 
     return Hotel(
@@ -301,4 +308,5 @@ def _build_fallback_hotel(city: str, hotel_candidates: list[HotelCandidate]):
         address=f"{city}交通便利区域",
         price=450,
         description="作为兜底住宿推荐，方便继续后续行程。",
+        location=Location(longitude=116.397128, latitude=39.916527),
     )

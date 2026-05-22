@@ -75,6 +75,7 @@ def format_hotel_candidates_for_prompt(candidates: list[HotelCandidate]) -> str:
     for index, hotel in enumerate(candidates, start=1):
         lines.append(
             f"{index}. {hotel.name} | 地址：{hotel.address or '地址待补充'} | "
+            f"坐标：{hotel.longitude}, {hotel.latitude} | "
             f"类型：{hotel.category or '酒店'} | 建议：{hotel.price_hint}"
         )
 

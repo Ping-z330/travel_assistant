@@ -33,6 +33,7 @@ class Hotel(BaseModel):
     address: str
     price: int
     description: str
+    location: Optional[Location] = None
 
 
 class WeatherInfo(BaseModel):

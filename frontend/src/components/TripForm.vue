@@ -4,9 +4,8 @@ import { useRouter } from 'vue-router'
 import { generateTripPlan } from '../services/tripApi'
 import type { TripPlanRequest } from '../types/trip'
 
-const preferences = ['自然风光', '历史人文', '美食探索', '亲子轻松', '紧凑打卡']
+const preferences = ['自然风光', '历史人文', '美食探索', '亲子轻松', '网红打卡']
 
-// form表单数据模型
 const form = reactive({
   city: '',
   startDate: '',
@@ -16,12 +15,10 @@ const form = reactive({
   preference: '自然风光',
 })
 
-// loading状态和错误信息、路由实例
 const loading = ref(false)
 const errorMessage = ref('')
 const router = useRouter()
 
-// 提交表单并生成旅行计划
 const handleSubmit = async () => {
   loading.value = true
   errorMessage.value = ''
@@ -35,12 +32,11 @@ const handleSubmit = async () => {
       people: form.people,
       preference: form.preference,
     }
-    // 发送请求并将结果存储在 sessionStorage 中，然后跳转到结果页
+
     const response = await generateTripPlan(request)
-    // 将旅行计划数据存储在 sessionStorage 中，以便在结果页获取
     sessionStorage.setItem('tripPlan', JSON.stringify(response))
     router.push('/result')
-  } catch (error) {
+  } catch {
     errorMessage.value = '生成旅行计划时发生错误，请稍后重试。'
   } finally {
     loading.value = false
@@ -58,7 +54,9 @@ const handleSubmit = async () => {
       </div>
       <div class="brand-slogan">
         <span class="brand-slogan-line">旅途最迷人的地方</span>
-        <span class="brand-slogan-line brand-slogan-muted">在于没人知道你从哪里来，又要去哪里......</span>
+        <span class="brand-slogan-line brand-slogan-muted">
+          在于没有人知道你从哪里来，又要去哪里。
+        </span>
       </div>
     </a>
 
@@ -111,7 +109,6 @@ const handleSubmit = async () => {
           {{ loading ? '生成中...' : '生成旅行计划' }}
         </button>
 
-        <!-- 错误信息 -->
         <p v-if="errorMessage" class="error-message">
           {{ errorMessage }}
         </p>
@@ -175,10 +172,10 @@ const handleSubmit = async () => {
   font-size: 30px;
   font-weight: 900;
   border-radius: 50%;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .brand-text {
@@ -186,7 +183,7 @@ const handleSubmit = async () => {
   line-height: 1.05;
   font-weight: 800;
   letter-spacing: 2px;
-  background: linear-gradient(90deg,#ffffff,#d6f5e8);
+  background: linear-gradient(90deg, #ffffff, #d6f5e8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -383,6 +380,5 @@ select:focus {
   .form-panel {
     padding: 24px;
   }
-
 }
 </style>

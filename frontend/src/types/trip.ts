@@ -1,4 +1,3 @@
-// 放置与行程规划相关的 TypeScript 类型定义
 export interface TripPlanRequest {
   city: string
   start_date: string
@@ -29,6 +28,7 @@ export interface Hotel {
   address: string
   price: number
   description: string
+  location?: Location
 }
 
 export interface WeatherInfo {
