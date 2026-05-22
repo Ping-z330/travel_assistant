@@ -1,5 +1,23 @@
-# Vue 3 + TypeScript + Vite
+# Frontend
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+前端说明已经合并到仓库根目录的 [README.md](../README.md)。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+本目录常用命令：
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+npm.cmd run build
+```
+
+前端地图环境变量请放在：
+
+```env
+frontend/.env.local
+```
+
+内容示例：
+
+```env
+VITE_AMAP_JSAPI_KEY=your_amap_jsapi_key
+```

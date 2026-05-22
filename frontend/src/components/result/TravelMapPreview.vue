@@ -57,49 +57,6 @@ const hotelPoints = computed(() =>
     })),
 )
 
-const initializeMap = async () => {
-  if (!mapContainerRef.value) {
-    return
-  }
-
-  const apiKey = import.meta.env.VITE_AMAP_JSAPI_KEY
-  if (!apiKey) {
-    mapError.value = '未配置高德地图 Key，请检查 frontend/.env.local。'
-    return
-  }
-
-  try {
-    await AMapLoader.load({
-      key: apiKey,
-      version: '2.0',
-      plugins: ['AMap.Scale', 'AMap.ToolBar'],
-    })
-
-    const AMap = (window as any).AMap
-    if (!AMap) {
-      throw new Error('高德地图对象未成功挂载')
-    }
-
-    const firstPoint = attractionPoints.value[0] ?? hotelPoints.value[0]
-    mapInstance = new AMap.Map(mapContainerRef.value, {
-      zoom: 11,
-      center: firstPoint
-        ? [firstPoint.longitude, firstPoint.latitude]
-        : [116.397128, 39.916527],
-      viewMode: '3D',
-      mapStyle: 'amap://styles/whitesmoke',
-    })
-
-    mapInstance.addControl(new AMap.Scale())
-    mapInstance.addControl(new AMap.ToolBar())
-
-    isMapReady.value = true
-    renderMapOverlays()
-  } catch (error) {
-    mapError.value = error instanceof Error ? error.message : '高德地图加载失败'
-  }
-}
-
 const clearMapOverlays = () => {
   if (!mapInstance || overlayInstances.length === 0) {
     overlayInstances = []
@@ -155,7 +112,7 @@ const renderMapOverlays = () => {
         content: `
           <div style="padding: 8px 10px; min-width: 220px; line-height: 1.7;">
             <strong>${point.name}</strong><br/>
-            <span style="color: ${point.color}; font-weight: 700;">第${point.day}天第${point.order}站</span><br/>
+            <span style="color: ${point.color}; font-weight: 700;">第 ${point.day} 天第 ${point.order} 站</span><br/>
             <span>${point.address}</span>
           </div>
         `,
@@ -218,7 +175,7 @@ const renderMapOverlays = () => {
       content: `
         <div style="padding: 8px 10px; min-width: 240px; line-height: 1.7;">
           <strong>${hotel.name}</strong><br/>
-          <span style="color: ${hotel.color}; font-weight: 700;">第${hotel.day}天住宿点</span><br/>
+          <span style="color: ${hotel.color}; font-weight: 700;">第 ${hotel.day} 天住宿点</span><br/>
           <span>${hotel.address}</span><br/>
           <span>参考价格：${hotel.price} 元</span>
         </div>
@@ -236,6 +193,49 @@ const renderMapOverlays = () => {
   overlayInstances = overlays
   mapInstance.add(overlays)
   mapInstance.setFitView(overlays, false, [60, 60, 60, 60])
+}
+
+const initializeMap = async () => {
+  if (!mapContainerRef.value) {
+    return
+  }
+
+  const apiKey = import.meta.env.VITE_AMAP_JSAPI_KEY
+  if (!apiKey) {
+    mapError.value = '未配置高德地图 Key，请检查 frontend/.env.local。'
+    return
+  }
+
+  try {
+    await AMapLoader.load({
+      key: apiKey,
+      version: '2.0',
+      plugins: ['AMap.Scale', 'AMap.ToolBar'],
+    })
+
+    const AMap = (window as any).AMap
+    if (!AMap) {
+      throw new Error('高德地图对象未成功挂载。')
+    }
+
+    const firstPoint = attractionPoints.value[0] ?? hotelPoints.value[0]
+    mapInstance = new AMap.Map(mapContainerRef.value, {
+      zoom: 11,
+      center: firstPoint
+        ? [firstPoint.longitude, firstPoint.latitude]
+        : [116.397128, 39.916527],
+      viewMode: '3D',
+      mapStyle: 'amap://styles/whitesmoke',
+    })
+
+    mapInstance.addControl(new AMap.Scale())
+    mapInstance.addControl(new AMap.ToolBar())
+
+    isMapReady.value = true
+    renderMapOverlays()
+  } catch (error) {
+    mapError.value = error instanceof Error ? error.message : '高德地图加载失败。'
+  }
 }
 
 onMounted(() => {
