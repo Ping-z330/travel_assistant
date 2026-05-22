@@ -21,7 +21,7 @@ defineProps<{
           <h2>{{ day.title }}</h2>
         </div>
         <div class="weather-pill">
-          {{ day.weather.weather }} · {{ day.weather.temperature }}
+          {{ day.weather.weather }} / {{ day.weather.temperature }}
         </div>
       </header>
 

@@ -1,16 +1,6 @@
 from dataclasses import dataclass
 
-from app.services.amap_client import get_weather_info
-
-
-CITY_ADCODE_MAP = {
-    "北京": "110000",
-    "上海": "310000",
-    "杭州": "330100",
-    "成都": "510100",
-    "广州": "440100",
-    "深圳": "440300",
-}
+from app.services.amap_client import geocode_city, get_weather_info
 
 
 @dataclass
@@ -36,7 +26,7 @@ def get_trip_weather_snapshot(city: str, *, max_days: int = 3) -> WeatherSnapsho
         raise RuntimeError("AMap weather response does not contain cast details")
 
     selected_casts = casts[:max_days]
-    summary_lines = []
+    summary_lines: list[str] = []
 
     for index, cast in enumerate(selected_casts, start=1):
         dayweather = str(cast.get("dayweather", "")).strip() or "天气待确认"
@@ -76,13 +66,11 @@ def format_weather_for_prompt(weather: WeatherSnapshot) -> str:
 
 
 def resolve_city_adcode(city: str) -> str:
-    normalized_city = city.strip()
-
-    for city_name, adcode in CITY_ADCODE_MAP.items():
-        if city_name in normalized_city:
-            return adcode
-
-    raise ValueError(f"Unsupported city for weather lookup: {city}")
+    result = geocode_city(city)
+    adcode = result.get("adcode", "").strip()
+    if not adcode:
+        raise ValueError(f"Unable to resolve city adcode: {city}")
+    return adcode
 
 
 def _build_weather_suggestion(casts: list[dict]) -> str:
