@@ -2,6 +2,7 @@ import re
 from dataclasses import dataclass
 
 from app.models.trip import TripPlanRequest
+from app.services.cache_utils import TTLCache
 from app.services.amap_client import search_text_pois
 
 
@@ -36,6 +37,8 @@ ALLOWED_CATEGORY_KEYWORDS = {
     "遗址",
 }
 
+POI_CACHE = TTLCache(ttl_seconds=1800)
+
 
 @dataclass
 class PoiCandidate:
@@ -52,6 +55,15 @@ def search_trip_poi_candidates(
     per_keyword_limit: int = 5,
     total_limit: int = 8,
 ) -> list[PoiCandidate]:
+    cache_key = (
+        f"poi:{request.city.strip()}:{request.days}:"
+        f"{request.preference.strip()}:{per_keyword_limit}:{total_limit}"
+    )
+    cached = POI_CACHE.get(cache_key)
+    if cached is not None:
+        print(f"[POI_CACHE] hit city={request.city}")
+        return cached
+
     candidates: list[PoiCandidate] = []
     seen_keys: set[tuple[str, str]] = set()
     seen_names: set[str] = set()
@@ -87,8 +99,10 @@ def search_trip_poi_candidates(
             candidates.append(candidate)
 
             if len(candidates) >= total_limit:
+                POI_CACHE.set(cache_key, candidates)
                 return candidates
 
+    POI_CACHE.set(cache_key, candidates)
     return candidates
 
 

@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from time import sleep
 
 import httpx
 
@@ -134,11 +135,31 @@ def _get_api_key() -> str:
     return api_key
 
 
-def _request_json(url: str, *, params: dict) -> dict:
-    with httpx.Client(timeout=10.0) as client:
-        response = client.get(url, params=params)
-        response.raise_for_status()
-    return response.json()
+def _request_json(
+    url: str,
+    *,
+    params: dict,
+    timeout: float = 8.0,
+    max_retries: int = 2,
+) -> dict:
+    last_error: Exception | None = None
+
+    for attempt in range(1, max_retries + 2):
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                response = client.get(url, params=params)
+                response.raise_for_status()
+            return response.json()
+        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+            last_error = exc
+            print(f"[AMAP_RETRY] attempt={attempt} url={url} error={exc}")
+
+            if attempt > max_retries:
+                break
+
+            sleep(0.8 * attempt)
+
+    raise RuntimeError(f"AMap request failed after retries: {last_error}")
 
 
 def _raise_for_amap_error(data: dict, prefix: str) -> None:

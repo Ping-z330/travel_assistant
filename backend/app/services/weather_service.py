@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 
 from app.services.amap_client import geocode_city, get_weather_info
+from app.services.cache_utils import TTLCache
+
+
+WEATHER_CACHE = TTLCache(ttl_seconds=1800)
 
 
 @dataclass
@@ -13,6 +17,12 @@ class WeatherSnapshot:
 
 
 def get_trip_weather_snapshot(city: str, *, max_days: int = 3) -> WeatherSnapshot:
+    cache_key = f"weather:{city.strip()}:{max_days}"
+    cached = WEATHER_CACHE.get(cache_key)
+    if cached is not None:
+        print(f"[WEATHER_CACHE] hit city={city} max_days={max_days}")
+        return cached
+
     adcode = resolve_city_adcode(city)
     raw = get_weather_info(adcode, extensions="all")
 
@@ -47,13 +57,15 @@ def get_trip_weather_snapshot(city: str, *, max_days: int = 3) -> WeatherSnapsho
     temperature_hint = "；".join(line.replace("- ", "") for line in summary_lines)
     suggestion = _build_weather_suggestion(selected_casts)
 
-    return WeatherSnapshot(
+    snapshot = WeatherSnapshot(
         city=city_name,
         report_time=report_time,
         summary="\n".join(summary_lines),
         temperature_hint=temperature_hint,
         suggestion=suggestion,
     )
+    WEATHER_CACHE.set(cache_key, snapshot)
+    return snapshot
 
 
 def format_weather_for_prompt(weather: WeatherSnapshot) -> str:

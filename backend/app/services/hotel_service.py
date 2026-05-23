@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from app.models.trip import TripPlanRequest
 from app.services.amap_client import geocode_city, search_around_pois
+from app.services.cache_utils import TTLCache
 
 
 @dataclass
@@ -21,9 +22,20 @@ HOTEL_CATEGORY_KEYWORDS = [
     "民宿",
 ]
 
+HOTEL_CACHE = TTLCache(ttl_seconds=1800)
+
 
 def search_trip_hotel_candidates(request: TripPlanRequest) -> list[HotelCandidate]:
     """根据预算生成关键词，并在目标城市中心点周边搜索酒店候选。"""
+    cache_key = (
+        f"hotel:{request.city.strip()}:{request.days}:"
+        f"{request.budget}:{request.preference.strip()}"
+    )
+    cached = HOTEL_CACHE.get(cache_key)
+    if cached is not None:
+        print(f"[HOTEL_CACHE] hit city={request.city}")
+        return cached
+
     keywords = build_hotel_keywords(request)
     center = resolve_city_center(request.city)
     candidates: list[HotelCandidate] = []
@@ -49,8 +61,10 @@ def search_trip_hotel_candidates(request: TripPlanRequest) -> list[HotelCandidat
             candidates.append(candidate)
 
             if len(candidates) >= 6:
+                HOTEL_CACHE.set(cache_key, candidates)
                 return candidates
 
+    HOTEL_CACHE.set(cache_key, candidates)
     return candidates
 
 
