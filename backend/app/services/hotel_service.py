@@ -25,6 +25,7 @@ HOTEL_CATEGORY_KEYWORDS = [
 HOTEL_CACHE = TTLCache(ttl_seconds=1800)
 
 
+# search_trip_hotel_candidates 函数负责根据预算生成关键词，并在目标城市中心点周边搜索酒店候选。
 def search_trip_hotel_candidates(request: TripPlanRequest) -> list[HotelCandidate]:
     """根据预算生成关键词，并在目标城市中心点周边搜索酒店候选。"""
     cache_key = (
@@ -68,6 +69,7 @@ def search_trip_hotel_candidates(request: TripPlanRequest) -> list[HotelCandidat
     return candidates
 
 
+# build_hotel_keywords 函数根据用户的预算生成不同档位的酒店搜索关键词，帮助提高搜索结果的相关性和质量。
 def build_hotel_keywords(request: TripPlanRequest) -> list[str]:
     """按人均日预算生成不同档位的酒店搜索关键词。"""
     budget_per_day = request.budget / max(request.days, 1)
@@ -80,6 +82,8 @@ def build_hotel_keywords(request: TripPlanRequest) -> list[str]:
     return ["高档酒店", "豪华酒店", "高评分酒店"]
 
 
+# format_hotel_candidates_for_prompt 函数把酒店候选整理成适合注入 LLM Prompt 的文本，
+# 包括酒店名称、地址、坐标、类型和预算提示等信息，这些信息将被传递给 LLM 来生成旅行计划。
 def format_hotel_candidates_for_prompt(candidates: list[HotelCandidate]) -> str:
     """把酒店候选整理成适合注入 LLM Prompt 的文本。"""
     if not candidates:

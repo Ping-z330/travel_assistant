@@ -16,6 +16,7 @@ class WeatherSnapshot:
     suggestion: str
 
 
+# get_trip_weather_snapshot 函数负责获取指定城市的天气快照信息，包括天气概况、温度提示和出行建议等内容，并使用缓存机制优化性能。
 def get_trip_weather_snapshot(city: str, *, max_days: int = 3) -> WeatherSnapshot:
     cache_key = f"weather:{city.strip()}:{max_days}"
     cached = WEATHER_CACHE.get(cache_key)
@@ -68,6 +69,8 @@ def get_trip_weather_snapshot(city: str, *, max_days: int = 3) -> WeatherSnapsho
     return snapshot
 
 
+# format_weather_for_prompt 函数负责将天气快照信息格式化为一个适合提示词使用的字符串，
+# 包括天气概况、温度提示和出行建议等内容，这些信息将被传
 def format_weather_for_prompt(weather: WeatherSnapshot) -> str:
     return (
         f"{weather.city}天气参考：\n"

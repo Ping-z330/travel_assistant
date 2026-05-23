@@ -12,6 +12,7 @@ class WeatherAgent:
     """负责天气查询与天气上下文整理。"""
 
     def run(self, request: TripPlanRequest) -> WeatherAgentResult:
+        # 记录开始时间，并打印日志信息，包括目的地城市等关键信息，方便后续的性能监控和调试。
         start = perf_counter()
         print(f"[WEATHER_AGENT] start city={request.city}")
 

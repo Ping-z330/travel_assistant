@@ -1,144 +1,19 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
+# 作用：提供正式的旅行计划生成接口，接受用户的旅行需求并返回完整的旅行计划。
+
+# TripPlanRequest 是一个 Pydantic 模型，定义了用户提交旅行计划请求时需要提供的字段和数据类型。
+# TripPlan 是一个 Pydantic 模型，定义了旅行计划的结构，包括每天的行程安排、景点信息、酒店信息等。
+# generate_trip_plan 是一个函数，根据用户的旅行需求生成旅行计划，支持使用 Mock 数据或调用 LLM 生成真实的旅行计划。
 from app.models.trip import TripPlan, TripPlanRequest
-from app.services.hotel_service import search_trip_hotel_candidates
-from app.services.image_service import search_attraction_image
-from app.services.poi_service import build_search_keywords, search_trip_poi_candidates
 from app.services.trip_plan_service import generate_trip_plan
-from app.services.weather_service import get_trip_weather_snapshot
 
+# 路由器定义了 /api/trip 的 API 路径，并将其标记为 "trip" 标签，方便在 API 文档中进行分类和展示。
 router = APIRouter(prefix="/api/trip", tags=["trip"])
 
 
+# create_trip_plan 是一个 POST 请求的处理函数，接受 TripPlanRequest 作为输入，
+# 并返回 TripPlan 作为输出。它调用 generate_trip_plan 函数来生成旅行计划，并将结果返回给客户端。
 @router.post("/plan", response_model=TripPlan)
 def create_trip_plan(request: TripPlanRequest) -> TripPlan:
     return generate_trip_plan(request)
-
-
-@router.get("/debug/poi")
-def debug_poi_search(
-    city: str = Query(..., description="目的地城市"),
-    preference: str = Query(..., description="旅行偏好"),
-):
-    request = TripPlanRequest(
-        city=city,
-        start_date="2026-01-01",
-        days=1,
-        budget=1000,
-        people=1,
-        preference=preference,
-    )
-
-    candidates = search_trip_poi_candidates(request)
-    keywords = build_search_keywords(preference)
-
-    return {
-        "city": city,
-        "preference": preference,
-        "keywords": keywords,
-        "count": len(candidates),
-        "pois": [
-            {
-                "name": poi.name,
-                "address": poi.address,
-                "longitude": poi.longitude,
-                "latitude": poi.latitude,
-                "category": poi.category,
-            }
-            for poi in candidates
-        ],
-    }
-
-
-@router.get("/debug/weather")
-def debug_weather(
-    city: str = Query(..., description="目的地城市"),
-):
-    weather = get_trip_weather_snapshot(city)
-
-    return {
-        "city": weather.city,
-        "report_time": weather.report_time,
-        "summary": weather.summary,
-        "temperature_hint": weather.temperature_hint,
-        "suggestion": weather.suggestion,
-    }
-
-
-@router.get("/debug/image")
-def debug_image_search(
-    name: str = Query(..., description="景点名称"),
-    city: str = Query(..., description="城市名称"),
-):
-    try:
-        result = search_attraction_image(name, city)
-    except Exception as exc:
-        return {
-            "name": name,
-            "city": city,
-            "found": False,
-            "error": str(exc),
-            "image": None,
-        }
-
-    if result is None:
-        return {
-            "name": name,
-            "city": city,
-            "found": False,
-            "error": None,
-            "image": None,
-        }
-
-    return {
-        "name": name,
-        "city": city,
-        "found": True,
-        "error": None,
-        "image": {
-            "image_url": result.image_url,
-            "thumb_url": result.thumb_url,
-            "alt_description": result.alt_description,
-            "photographer": result.photographer,
-            "photographer_url": result.photographer_url,
-            "download_location": result.download_location,
-        },
-    }
-
-
-@router.get("/debug/hotel")
-def debug_hotel_search(
-    city: str = Query(..., description="目的地城市"),
-    budget: int = Query(..., description="总预算"),
-    days: int = Query(3, description="旅行天数"),
-    preference: str = Query("舒适,交通便利", description="旅行偏好"),
-):
-    request = TripPlanRequest(
-        city=city,
-        start_date="2026-06-01",
-        days=days,
-        budget=budget,
-        people=2,
-        preference=preference,
-    )
-
-    candidates = search_trip_hotel_candidates(request)
-
-    return {
-        "city": city,
-        "budget": budget,
-        "days": days,
-        "preference": preference,
-        "count": len(candidates),
-        "hotels": [
-            {
-                "name": hotel.name,
-                "address": hotel.address,
-                "longitude": hotel.longitude,
-                "latitude": hotel.latitude,
-                "category": hotel.category,
-                "price_hint": hotel.price_hint,
-            }
-            for hotel in candidates
-        ],
-    }

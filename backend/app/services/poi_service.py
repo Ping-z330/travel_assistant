@@ -49,6 +49,8 @@ class PoiCandidate:
     category: str
 
 
+# search_trip_poi_candidates 函数负责根据用户的旅行需求搜索景点候选列表，
+# 并进行去重和过滤，最终返回一个符合条件的景点候选列表。
 def search_trip_poi_candidates(
     request: TripPlanRequest,
     *,
@@ -105,7 +107,7 @@ def search_trip_poi_candidates(
     POI_CACHE.set(cache_key, candidates)
     return candidates
 
-
+# format_poi_candidates_for_prompt 函数负责将景点候选列表格式化为一个适合提示词使用的字符串，
 def format_poi_candidates_for_prompt(candidates: list[PoiCandidate]) -> str:
     if not candidates:
         return "暂无真实景点候选，可根据城市常识生成合理行程。"

@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.trip import router as trip_router
+from app.api.trip_debug import router as trip_debug_router
 
 load_dotenv()
 
@@ -21,8 +22,9 @@ app.add_middleware(
 )
 
 app.include_router(trip_router)
+app.include_router(trip_debug_router)
 
-# 根路径健康检查接口
+
 @app.get("/")
 def read_root() -> dict:
     return {"message": "AI Travel Assistant API is running"}
