@@ -1,34 +1,118 @@
-# 智能旅行助手
+# 智能旅行助手（多智能体最终版）
 
-一个基于 `Vue 3 + FastAPI + LLM` 的智能旅行规划项目。系统可以根据用户输入的城市、天数、预算、人数和旅行偏好，自动生成结构化行程，并融合真实外部数据完成地图可视化展示。
+一个基于 `Vue 3 + FastAPI + LLM` 的智能旅行规划项目。系统会根据用户输入的城市、出发日期、天数、预算、人数和旅行偏好，自动生成结构化旅行计划，并结合真实外部数据完成地图展示与结果导出。
 
-## 当前能力
+## 项目亮点
 
-- 基于 `DeepSeek` 生成多天旅行计划
-- 接入高德 `POI` 搜索，提供真实景点候选
-- 接入高德天气查询，结合天气调整行程建议
-- 接入高德酒店候选搜索，输出真实酒店名称与坐标
-- 接入 `Unsplash` 图片搜索，为景点补充展示图片
-- 支持动态城市解析，不再依赖固定城市映射表
-- 支持结果页地图展示
-- 地图上区分每日景点路线与酒店点位
-- 支持结果页导出 PDF
+- 基于 `DeepSeek` 生成多日旅行计划
+- 接入高德真实 `POI`、天气、酒店数据
+- 接入 `Unsplash` 景点图片
+- 支持动态城市解析，不依赖固定城市映射表
+- 支持地图展示、酒店点位展示与按天路线区分
+- 支持 PDF 导出
+- 已完成第一版多智能体协作架构
+- 已加入日志、重试、并行和缓存优化
+
+## 当前架构
+
+### 后端核心链路
+
+```text
+前端请求
+-> POST /api/trip/plan
+-> trip_plan_service.generate_trip_plan
+-> PlannerAgent.run
+   -> AttractionAgent
+   -> WeatherAgent
+   -> HotelAgent
+-> PromptBuilder 组装 Prompt
+-> DeepSeek 生成结构化 TripPlan
+-> parse_llm_trip_plan
+-> normalize_trip_plan
+-> 返回前端
+```
+
+### 多智能体职责拆分
+
+- `PlannerAgent`
+  负责统一调度子 Agent、调用 LLM、汇总结果。
+- `AttractionAgent`
+  负责景点候选搜索与景点上下文整理。
+- `WeatherAgent`
+  负责天气查询与天气上下文整理。
+- `HotelAgent`
+  负责酒店候选搜索与酒店上下文整理。
+- `PromptBuilder`
+  负责把用户需求、景点、天气、酒店上下文组装成最终 Prompt。
+
+## 功能概览
+
+### 1. 行程生成
+
+- 输入城市、日期、天数、预算、人数和偏好
+- 自动生成多天结构化行程
+- 每天包含：
+  - 景点
+  - 酒店
+  - 餐饮建议
+  - 天气信息
+
+### 2. 真实数据增强
+
+- 景点：高德 POI 搜索 + 清洗去重
+- 天气：高德天气查询
+- 酒店：高德酒店候选搜索 + 坐标
+- 图片：Unsplash 搜图
+
+### 3. 地图展示
+
+- 景点按天使用不同颜色显示
+- 每天路线单独绘制
+- 酒店使用独立图标显示
+- 连续多天入住同一家酒店时自动合并点位
+
+### 4. PDF 导出
+
+- 结果页支持一键导出 PDF
+- 基于 `html2canvas + jsPDF`
 
 ## 项目结构
 
 ```text
 travel-assistant/
-├─ backend/                  # FastAPI 后端
+├─ backend/
 │  ├─ app/
-│  │  ├─ api/                # 路由
-│  │  ├─ models/             # Pydantic 数据模型
-│  │  └─ services/           # LLM / 高德 / 图片 / mock / 规划逻辑
-│  └─ main.py                # FastAPI 入口
-├─ frontend/                 # Vue 3 前端
-│  ├─ src/components/        # 表单、结果页、地图、卡片组件
-│  ├─ src/services/          # 前端 API 调用
-│  └─ src/types/             # 前端类型定义
-└─ ROADMAP.md                # 项目阶段路线图
+│  │  ├─ agents/
+│  │  │  ├─ attraction_agent.py
+│  │  │  ├─ weather_agent.py
+│  │  │  ├─ hotel_agent.py
+│  │  │  ├─ planner_agent.py
+│  │  │  ├─ prompt_builder.py
+│  │  │  └─ schemas.py
+│  │  ├─ api/
+│  │  │  ├─ trip.py
+│  │  │  └─ trip_debug.py
+│  │  ├─ models/
+│  │  │  └─ trip.py
+│  │  └─ services/
+│  │     ├─ amap_client.py
+│  │     ├─ poi_service.py
+│  │     ├─ weather_service.py
+│  │     ├─ hotel_service.py
+│  │     ├─ image_service.py
+│  │     ├─ llm_trip_service.py
+│  │     ├─ llm_client.py
+│  │     ├─ trip_plan_service.py
+│  │     ├─ mock_trip_service.py
+│  │     └─ cache_utils.py
+│  └─ main.py
+├─ frontend/
+│  ├─ src/components/
+│  ├─ src/services/
+│  ├─ src/types/
+│  └─ src/views/
+├─ README.md
+└─ ROADMAP.md
 ```
 
 ## 技术栈
@@ -49,8 +133,8 @@ travel-assistant/
 - FastAPI
 - Pydantic
 - httpx
-- OpenAI SDK 兼容调用 DeepSeek
 - python-dotenv
+- OpenAI SDK 兼容方式调用 DeepSeek
 
 ### 外部服务
 
@@ -84,10 +168,11 @@ VITE_AMAP_JSAPI_KEY=your_amap_jsapi_key
 ```powershell
 cd e:\Ai_Project\travel-assistant\backend
 .\venv\Scripts\Activate.ps1
+$env:TRIP_PLAN_MODE="llm"
 uvicorn main:app --reload --port 8003
 ```
 
-后端启动后可访问：
+启动后访问：
 
 - `http://localhost:8003/`
 - `http://localhost:8003/docs`
@@ -100,14 +185,19 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-前端开发地址默认是：
+默认开发地址：
 
 - `http://localhost:5173`
 
-## 主要接口
+## API 说明
+
+### 正式接口
 
 - `POST /api/trip/plan`
   生成正式旅行计划
+
+### 调试接口
+
 - `GET /api/trip/debug/poi`
   调试景点搜索
 - `GET /api/trip/debug/weather`
@@ -117,61 +207,82 @@ npm.cmd run dev
 - `GET /api/trip/debug/image`
   调试景点图片搜索
 
+## 稳定性与性能优化
+
+当前版本已加入以下工程化能力：
+
+- 重试
+  - 高德底层请求支持超时/网络错误轻量重试
+- 并行
+  - `PlannerAgent` 会并行调用景点、天气、酒店三个子 Agent
+- 缓存
+  - 景点、天气、酒店支持短时 TTL 缓存
+  - 城市地理编码支持 `lru_cache`
+- 日志
+  - 各 Agent 具备开始、成功、失败、耗时日志
+- 兜底
+  - LLM 返回异常时支持结构修补和 fallback
+
 ## 结果页说明
 
 结果页当前包含：
 
 - 行程概览
 - 预算摘要
-- 地图预览
+- 地图展示
 - 每日景点安排
-- 每日天气信息
-- 每日酒店推荐
+- 天气信息
+- 酒店推荐
+- 餐饮建议
 - 景点图片
-- PDF 导出按钮
+- PDF 导出
 
-地图增强效果包括：
+## 多智能体工作方式
 
-- 每天路线使用不同颜色区分
-- 景点使用胶囊编号标记
-- 酒店单独使用“住”图标标记
-- 酒店不参与景点连线
+可以把当前系统理解成“一个总控规划师 + 三个专业助手”：
 
-## 四城市回归测试
+- `AttractionAgent`
+  提供景点候选
+- `WeatherAgent`
+  提供天气摘要
+- `HotelAgent`
+  提供酒店候选
+- `PlannerAgent`
+  汇总三者并调用大模型生成最终 `TripPlan`
 
-测试时间：`2026-05-22`
+这属于第一版协作式多智能体架构，特点是：
 
-测试方式：
+- 职责明确
+- 调度清晰
+- 容易扩展
+- 比单智能体版本更利于维护和优化
 
-- 启用 `TRIP_PLAN_MODE=llm`
-- 使用真实高德、DeepSeek、Unsplash 链路
-- 直接调用后端 `generate_trip_plan`
+## 回归测试
 
-测试结果如下：
+当前版本已完成以下城市的真实链路回归：
 
-| 城市 | 天数 | 第一天景点示例 | 第一天酒店示例 | 酒店坐标 | 结果 |
-| --- | --- | --- | --- | --- | --- |
-| 北京 | 3 天 | 故宫博物院、南锣鼓巷 | 正义路酒店(北京王府井天安门广场店) | 有 | 通过 |
-| 杭州 | 3 天 | 杭州西湖风景名胜区、雷峰塔景区 | 全季酒店(杭州钱江新城店) | 有 | 通过 |
-| 成都 | 3 天 | 成都武侯祠博物馆、锦里古街 | 蔚盛酒店(大魔方金融城演艺中心环球中心店) | 有 | 通过 |
-| 南昌 | 3 天 | 滕王阁、八大山人梅湖景区 | 全季酒店(南昌红谷滩万达广场酒店) | 有 | 通过 |
+- 北京
+- 杭州
+- 成都
+- 南昌
 
-说明：
+验证内容包括：
 
-- 四个城市都能返回 3 天结构化行程
-- 四个城市第一天酒店都带真实坐标
-- 地图展示可直接消费酒店与景点坐标
+- `/api/trip/plan` 正常返回
+- 景点、天气、酒店结果完整
+- 酒店带真实坐标
+- 地图可消费返回坐标
 
 ## 已知说明
 
-- PDF 导出当前以页面截图方式生成，长内容会自动分页
+- PDF 导出当前基于页面截图，长内容会自动分页
 - 第三方地图瓦片在部分场景下可能影响 PDF 中的地图截图表现
-- 个别外部接口在网络抖动时可能触发警告日志，但系统保留 fallback 机制
+- 外部接口网络波动时仍可能出现 warning，但系统保留了 fallback 和兜底逻辑
 
 ## 后续方向
 
-- 优化首页与结果页剩余细节文案
-- 增强 PDF 导出效果
-- 支持地图与卡片联动
-- 接入更真实的多点路线规划
-- 继续完善文档与演示材料
+- 完善单元测试与集成测试
+- 进一步清理后端剩余历史乱码与注释
+- 继续增强 PDF 导出体验
+- 增强地图与卡片联动
+- 继续升级更高级的多智能体协作模式
