@@ -81,15 +81,16 @@ const exportToPdf = async () => {
   <section class="trip-result">
     <header class="result-nav">
       <div>
-        <p class="nav-eyebrow">AI Travel Assistant</p>
-        <strong>智能旅行助手</strong>
+        <p class="nav-eyebrow">AI Travel Plan</p>
+        <strong>{{ tripPlan.city }} {{ tripPlan.days.length }} 日旅行计划</strong>
+        <span class="nav-meta">{{ tripPlan.start_date }} 出发</span>
       </div>
 
       <div class="result-actions">
-        <button class="export-button" type="button" :disabled="exporting" @click="exportToPdf">
-          {{ exporting ? '导出中...' : '导出 PDF' }}
-        </button>
         <button class="back-button" type="button" @click="backToForm">返回修改</button>
+        <button class="export-button" type="button" :disabled="exporting" @click="exportToPdf">
+          {{ exporting ? '正在整理 PDF...' : '导出 PDF' }}
+        </button>
       </div>
     </header>
 
@@ -103,9 +104,13 @@ const exportToPdf = async () => {
 
         <div class="result-content">
           <template v-if="activeSection === 'overview'">
-            <TripOverview :trip-plan="tripPlan" />
-            <BudgetSummary :budget="tripPlan.budget" />
-            <TravelMapPreview :trip-plan="tripPlan" />
+            <section class="overview-dashboard" aria-label="行程总览">
+              <TripOverview :trip-plan="tripPlan" />
+              <BudgetSummary :budget="tripPlan.budget" />
+            </section>
+            <section class="map-showcase" aria-label="路线地图">
+              <TravelMapPreview :trip-plan="tripPlan" />
+            </section>
           </template>
 
           <section v-else class="day-timeline" aria-label="每日行程">
@@ -122,12 +127,12 @@ const exportToPdf = async () => {
   min-height: 100vh;
   padding: 28px 20px 56px;
   background:
-    linear-gradient(180deg, rgba(23, 107, 93, 0.1), transparent 280px),
+    linear-gradient(180deg, rgba(23, 107, 93, 0.14), transparent 320px),
     var(--bg);
 }
 
 .result-nav {
-  width: min(1120px, 100%);
+  width: min(1240px, 100%);
   margin: 0 auto 28px;
   display: flex;
   align-items: center;
@@ -136,8 +141,10 @@ const exportToPdf = async () => {
 }
 
 .result-nav strong {
+  display: block;
   color: var(--text);
-  font-size: 30px;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.12;
 }
 
 .nav-eyebrow {
@@ -149,32 +156,52 @@ const exportToPdf = async () => {
   text-transform: uppercase;
 }
 
+.nav-meta {
+  display: inline-flex;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .result-actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .result-shell {
-  width: min(1120px, 100%);
+  width: min(1240px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 208px minmax(0, 1fr);
   gap: 24px;
 }
 
 .result-content {
   display: grid;
-  gap: 24px;
+  gap: 18px;
+  min-width: 0;
+}
+
+.overview-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.map-showcase {
   min-width: 0;
 }
 
 .back-button {
   min-height: 42px;
   padding: 0 18px;
-  color: #ffffff;
-  background: var(--primary);
-  border: 0;
+  color: var(--primary-dark);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--line);
   border-radius: 6px;
   font-weight: 800;
   cursor: pointer;
@@ -183,9 +210,9 @@ const exportToPdf = async () => {
 .export-button {
   min-height: 42px;
   padding: 0 18px;
-  color: var(--primary-dark);
-  background: #ffffff;
-  border: 1px solid var(--line);
+  color: #ffffff;
+  background: var(--primary);
+  border: 1px solid var(--primary);
   border-radius: 6px;
   font-weight: 800;
   cursor: pointer;
@@ -205,6 +232,10 @@ const exportToPdf = async () => {
   .result-shell {
     grid-template-columns: 1fr;
   }
+
+  .overview-dashboard {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -213,7 +244,12 @@ const exportToPdf = async () => {
   }
 
   .result-nav {
+    display: grid;
     align-items: flex-start;
+  }
+
+  .result-actions {
+    justify-content: flex-start;
   }
 }
 </style>

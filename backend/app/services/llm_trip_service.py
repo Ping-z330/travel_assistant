@@ -129,6 +129,8 @@ def normalize_trip_plan(
         ):
             day.hotel = _build_fallback_hotel(request.city, hotel_candidates)
 
+        _ensure_daily_meals(day.meals, request.city)
+
     _enrich_missing_attraction_images(trip_plan, request.city)
 
     trip_plan.budget.total = (
@@ -210,7 +212,7 @@ def _build_fallback_day(day: int, city: str):
             _build_fallback_attraction(city, suffix=f"第{day}天补充点位1"),
             _build_fallback_attraction(city, suffix=f"第{day}天补充点位2"),
         ],
-        meals=["午餐：本地特色餐厅", "晚餐：城市商圈用餐"],
+        meals=["早餐：酒店或附近早餐店", "午餐：本地特色餐厅", "晚餐：城市商圈用餐"],
         hotel=Hotel(
             name=f"{city}舒适酒店",
             address=f"{city}交通便利区域",
@@ -240,6 +242,17 @@ def _build_fallback_attraction(city: str, suffix: str = "城市漫游"):
         image_url="",
         category="自由探索",
     )
+
+
+def _ensure_daily_meals(meals: list[str], city: str) -> None:
+    if not any(meal.strip().startswith("早餐") for meal in meals):
+        meals.insert(0, f"早餐：{city}本地早餐或酒店早餐")
+
+    if not any(meal.strip().startswith("午餐") for meal in meals):
+        meals.append("午餐：本地特色餐厅")
+
+    if not any(meal.strip().startswith("晚餐") for meal in meals):
+        meals.append("晚餐：城市商圈用餐")
 
 
 def _safe_search_attraction_image(name: str, city: str):

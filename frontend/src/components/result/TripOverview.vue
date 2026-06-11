@@ -9,16 +9,23 @@ defineProps<{
 <template>
   <section class="hero-summary">
     <div>
-      <p class="eyebrow">Generated Trip Plan</p>
-      <h1>{{ tripPlan.city }}旅行计划</h1>
+      <p class="eyebrow">Trip Brief</p>
+      <h1>整体建议</h1>
+      <div class="summary-meta">
+        <div>
+          <span>目的地</span>
+          <strong>{{ tripPlan.city }}</strong>
+        </div>
+        <div>
+          <span>出发日期</span>
+          <strong>{{ tripPlan.start_date }}</strong>
+        </div>
+        <div>
+          <span>行程天数</span>
+          <strong>{{ tripPlan.days.length }} 天</strong>
+        </div>
+      </div>
       <p class="summary-text">{{ tripPlan.overall_suggestion }}</p>
-    </div>
-
-    <div class="summary-meta">
-      <span>出发日期</span>
-      <strong>{{ tripPlan.start_date }}</strong>
-      <span>行程天数</span>
-      <strong>{{ tripPlan.days.length }} 天</strong>
     </div>
   </section>
 </template>
@@ -34,11 +41,8 @@ defineProps<{
 }
 
 .hero-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 28px;
-  align-items: end;
-  padding: 34px;
+  height: 100%;
+  padding: 26px;
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -48,24 +52,32 @@ defineProps<{
 .hero-summary h1 {
   margin: 0 0 12px;
   color: var(--text);
-  font-size: clamp(34px, 5vw, 54px);
-  line-height: 1.08;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.12;
 }
 
 .summary-text {
-  max-width: 720px;
-  margin: 0;
+  max-width: 680px;
+  margin: 18px 0 0;
   color: var(--muted);
   line-height: 1.7;
 }
 
 .summary-meta {
   display: grid;
-  gap: 8px;
-  padding: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 0;
+  padding: 16px;
   background: var(--soft);
   border: 1px solid #d3e2d8;
   border-radius: 8px;
+}
+
+.summary-meta div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .summary-meta span {
@@ -76,18 +88,19 @@ defineProps<{
 
 .summary-meta strong {
   color: var(--primary-dark);
-  font-size: 18px;
+  font-size: 17px;
 }
 
 @media (max-width: 860px) {
-  .hero-summary {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 560px) {
   .hero-summary {
     padding: 20px;
+  }
+
+  .summary-meta {
+    grid-template-columns: 1fr;
   }
 }
 </style>

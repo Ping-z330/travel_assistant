@@ -303,17 +303,10 @@ onUnmounted(() => {
   <section class="travel-map-panel" aria-label="旅游地图">
     <div class="map-header">
       <div>
-        <p class="eyebrow">Travel Map</p>
-        <h2>旅游地图</h2>
+        <p class="eyebrow">Route Map</p>
+        <h2>{{ tripPlan.city }}路线地图</h2>
       </div>
       <span>{{ isMapReady ? '高德地图已连接' : '地图预览' }}</span>
-    </div>
-
-    <div ref="mapContainerRef" class="map-canvas">
-      <div v-if="mapError" class="map-overlay-message map-overlay-message--error">
-        {{ mapError }}
-      </div>
-      <div v-else-if="!isMapReady" class="map-overlay-message">地图加载中...</div>
     </div>
 
     <div class="map-summary">
@@ -331,6 +324,13 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <div ref="mapContainerRef" class="map-canvas">
+      <div v-if="mapError" class="map-overlay-message map-overlay-message--error">
+        {{ mapError }}
+      </div>
+      <div v-else-if="!isMapReady" class="map-overlay-message">地图加载中...</div>
+    </div>
+
     <div class="map-legend" aria-label="路线图例">
       <div v-for="route in dayRoutes" :key="route.day" class="legend-item">
         <i class="legend-color" :style="{ backgroundColor: route.color }"></i>
@@ -342,34 +342,39 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="map-point-section">
-      <h3>景点点位</h3>
-      <div class="map-point-list" aria-label="景点点位列表">
-        <div
-          v-for="point in attractionPoints"
-          :key="`${point.day}-${point.order}-${point.name}`"
-          class="map-point-item"
-        >
-          <i class="point-color" :style="{ backgroundColor: point.color }"></i>
-          <span>第 {{ point.day }} 天</span>
-          <strong>{{ point.name }}</strong>
-          <em>{{ point.longitude }}, {{ point.latitude }}</em>
+    <div class="route-overview" aria-label="每日路线列表">
+      <article v-for="route in dayRoutes" :key="route.day" class="route-overview-card">
+        <div class="route-overview-head">
+          <i class="point-color" :style="{ backgroundColor: route.color }"></i>
+          <strong>第 {{ route.day }} 天路线</strong>
+          <span>{{ route.points.length }} 个景点</span>
         </div>
-      </div>
+        <ol class="route-stop-list">
+          <li v-for="point in route.points" :key="`${point.day}-${point.order}-${point.name}`">
+            <span>{{ point.order }}</span>
+            <div>
+              <strong>{{ point.name }}</strong>
+              <em>{{ point.address }}</em>
+            </div>
+          </li>
+        </ol>
+      </article>
     </div>
 
-    <div v-if="hotelPoints.length > 0" class="map-point-section">
+    <div v-if="hotelPoints.length > 0" class="hotel-route-section">
       <h3>住宿点位</h3>
-      <div class="map-point-list" aria-label="住宿点位列表">
+      <div class="hotel-point-list" aria-label="住宿点位列表">
         <div
           v-for="hotel in hotelPoints"
           :key="`${hotel.startDay}-${hotel.endDay}-${hotel.name}`"
-          class="map-point-item"
+          class="hotel-point-item"
         >
           <i class="point-color" :style="{ backgroundColor: hotel.color }"></i>
-          <span>{{ formatStayRange(hotel.startDay, hotel.endDay) }}</span>
-          <strong>{{ hotel.name }}</strong>
-          <em>{{ hotel.longitude }}, {{ hotel.latitude }}</em>
+          <div>
+            <span>{{ formatStayRange(hotel.startDay, hotel.endDay) }}</span>
+            <strong>{{ hotel.name }}</strong>
+            <em>{{ hotel.address }}</em>
+          </div>
         </div>
       </div>
     </div>
@@ -388,11 +393,12 @@ onUnmounted(() => {
 
 .travel-map-panel {
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 16px;
+  padding: 22px;
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 8px;
+  box-shadow: var(--shadow);
 }
 
 .map-header {
@@ -405,7 +411,7 @@ onUnmounted(() => {
 .map-header h2 {
   margin: 4px 0 0;
   color: var(--text);
-  font-size: 26px;
+  font-size: 30px;
 }
 
 .map-header > span {
@@ -419,7 +425,7 @@ onUnmounted(() => {
 
 .map-canvas {
   position: relative;
-  min-height: 360px;
+  min-height: 520px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -447,13 +453,15 @@ onUnmounted(() => {
 .map-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .map-summary div {
   display: grid;
-  gap: 6px;
-  padding: 14px;
+  gap: 5px;
+  min-height: 70px;
+  align-content: center;
+  padding: 12px 14px;
   background: #fbfcfa;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -472,7 +480,7 @@ onUnmounted(() => {
 .map-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .legend-item {
@@ -499,31 +507,82 @@ onUnmounted(() => {
   flex: 0 0 auto;
 }
 
-.map-point-section {
+.route-overview {
   display: grid;
-  gap: 10px;
-}
-
-.map-point-section h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: 16px;
-}
-
-.map-point-list {
-  display: grid;
-  gap: 10px;
-}
-
-.map-point-item {
-  display: grid;
-  grid-template-columns: 16px 130px minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  align-items: center;
-  padding: 12px 14px;
+}
+
+.route-overview-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
   background: #fbfcfa;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.route-overview-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.route-overview-head strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.route-overview-head span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.route-stop-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-stop-list li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.route-stop-list li > span {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--primary);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.route-stop-list strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.route-stop-list em {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.5;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .point-color {
@@ -532,17 +591,49 @@ onUnmounted(() => {
   border-radius: 999px;
 }
 
-.map-point-item span {
+.hotel-route-section {
+  display: grid;
+  gap: 10px;
+}
+
+.hotel-route-section h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.hotel-point-list {
+  display: grid;
+  gap: 10px;
+}
+
+.hotel-point-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  background: #fff8ef;
+  border: 1px solid rgba(194, 124, 44, 0.2);
+  border-radius: 8px;
+}
+
+.hotel-point-item span {
+  display: block;
   color: var(--accent);
   font-size: 13px;
   font-weight: 800;
 }
 
-.map-point-item strong {
+.hotel-point-item strong {
+  display: block;
+  margin-top: 3px;
   color: var(--text);
 }
 
-.map-point-item em {
+.hotel-point-item em {
+  display: block;
+  margin-top: 3px;
   color: var(--muted);
   font-size: 13px;
   font-style: normal;
@@ -550,6 +641,14 @@ onUnmounted(() => {
 
 @media (max-width: 860px) {
   .map-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .map-canvas {
+    min-height: 420px;
+  }
+
+  .route-overview {
     grid-template-columns: 1fr;
   }
 }
@@ -563,9 +662,8 @@ onUnmounted(() => {
     display: grid;
   }
 
-  .map-point-item {
-    grid-template-columns: 1fr;
-    gap: 4px;
+  .map-canvas {
+    min-height: 340px;
   }
 }
 </style>

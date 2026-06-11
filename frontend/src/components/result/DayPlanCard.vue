@@ -31,7 +31,6 @@ const getWeatherIcon = (weatherText: string) => {
     <div class="day-content">
       <header class="day-header">
         <div>
-          <p class="day-label">第 {{ props.day.day }} 天</p>
           <h2>{{ props.day.title }}</h2>
         </div>
         <div class="weather-pill">
@@ -46,12 +45,17 @@ const getWeatherIcon = (weatherText: string) => {
 
       <div class="section-block">
         <h3>景点安排</h3>
-        <div class="attraction-list">
-          <AttractionCard
-            v-for="attraction in props.day.attractions"
+        <div class="attraction-timeline">
+          <div
+            v-for="(attraction, index) in props.day.attractions"
             :key="attraction.name"
-            :attraction="attraction"
-          />
+            class="timeline-stop"
+          >
+            <div class="timeline-marker">
+              <span>{{ index + 1 }}</span>
+            </div>
+            <AttractionCard :attraction="attraction" />
+          </div>
         </div>
       </div>
 
@@ -85,15 +89,6 @@ const getWeatherIcon = (weatherText: string) => {
 </template>
 
 <style scoped>
-.day-label {
-  margin: 0;
-  color: var(--accent);
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .day-card {
   display: grid;
   grid-template-columns: 78px minmax(0, 1fr);
@@ -139,7 +134,7 @@ const getWeatherIcon = (weatherText: string) => {
 }
 
 .day-header h2 {
-  margin: 4px 0 0;
+  margin: 0;
   color: var(--text);
   font-size: 24px;
 }
@@ -185,10 +180,51 @@ const getWeatherIcon = (weatherText: string) => {
   line-height: 1.7;
 }
 
-.attraction-list {
+.attraction-timeline {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
+}
+
+.attraction-timeline::before {
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  left: 19px;
+  width: 2px;
+  content: "";
+  background: linear-gradient(180deg, rgba(23, 107, 93, 0.26), rgba(216, 139, 45, 0.2));
+}
+
+.timeline-stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.timeline-marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  background: #ffffff;
+  border-radius: 999px;
+}
+
+.timeline-marker span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--primary);
+  border-radius: inherit;
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .day-side-grid {
@@ -211,6 +247,10 @@ const getWeatherIcon = (weatherText: string) => {
 
 .info-card--meals {
   background: linear-gradient(180deg, #f7fbf8, #ffffff);
+}
+
+.info-card--meals p {
+  font-size: 15px;
 }
 
 .info-card-header {
@@ -257,12 +297,12 @@ const getWeatherIcon = (weatherText: string) => {
 .meal-tag {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 7px 11px;
   color: var(--primary-dark);
   background: #ffffff;
   border: 1px solid rgba(23, 107, 93, 0.12);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -290,8 +330,13 @@ const getWeatherIcon = (weatherText: string) => {
     padding: 20px;
   }
 
-  .attraction-list {
+  .timeline-stop {
     grid-template-columns: 1fr;
+  }
+
+  .attraction-timeline::before,
+  .timeline-marker {
+    display: none;
   }
 }
 </style>

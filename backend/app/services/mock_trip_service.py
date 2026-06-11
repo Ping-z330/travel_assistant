@@ -16,6 +16,7 @@ def build_mock_trip_plan(request: TripPlanRequest) -> TripPlan:
     requirement_result = RequirementAgent().run(request)
     template_days = _get_city_template(city, request.start_date)
     selected_days = _build_days_by_request(template_days, request.days, city)
+    _ensure_breakfast_meals(selected_days, city)
     budget = _calculate_budget(selected_days, request.people)
     requirements_text = (
         f"，并参考“{request.requirements.strip()}”补充需求"
@@ -73,7 +74,7 @@ def _calculate_budget(days: list[DayPlan], people: int) -> Budget:
         for day in days
         for attraction in day.attractions
     )
-    total_meals = 120 * people * len(days)
+    total_meals = 150 * people * len(days)
     total_transportation = 80 * people * len(days)
 
     return Budget(
@@ -111,7 +112,7 @@ def _build_free_exploration_day(day: int, city: str) -> DayPlan:
                 category="城市体验",
             ),
         ],
-        meals=["午餐：本地特色餐厅", "晚餐：城市夜市或商圈"],
+        meals=["早餐：酒店或附近早餐店", "午餐：本地特色餐厅", "晚餐：城市夜市或商圈"],
         hotel=Hotel(
             name=f"{city}舒适酒店",
             address=f"{city}交通便利区域",
@@ -125,6 +126,12 @@ def _build_free_exploration_day(day: int, city: str) -> DayPlan:
             suggestion="这一天安排较灵活，可以根据天气和体力微调路线。",
         ),
     )
+
+
+def _ensure_breakfast_meals(days: list[DayPlan], city: str) -> None:
+    for day in days:
+        if not any(meal.strip().startswith("早餐") for meal in day.meals):
+            day.meals.insert(0, f"早餐：{city}本地早餐或酒店早餐")
 
 
 def _beijing_template(start_date: str) -> list[DayPlan]:

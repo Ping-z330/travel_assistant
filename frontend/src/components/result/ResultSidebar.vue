@@ -13,13 +13,15 @@ const emit = defineEmits<{
 
 <template>
   <aside class="result-sidebar" aria-label="行程导航">
+    <p class="sidebar-title">行程目录</p>
+
     <button
-      class="sidebar-item"
+      class="sidebar-item sidebar-item--overview"
       :class="{ active: activeSection === 'overview' }"
       type="button"
       @click="emit('selectSection', 'overview')"
     >
-      <span>Overview</span>
+      <span class="sidebar-kicker">Overview</span>
       <strong>行程概览</strong>
     </button>
 
@@ -31,8 +33,7 @@ const emit = defineEmits<{
       type="button"
       @click="emit('selectSection', day.day)"
     >
-      <span>Day {{ day.day }}</span>
-      <strong>第 {{ day.day }} 天</strong>
+      <strong>第 {{ day.day }} 天 · {{ day.title }}</strong>
     </button>
   </aside>
 </template>
@@ -42,23 +43,42 @@ const emit = defineEmits<{
   position: sticky;
   top: 24px;
   display: grid;
-  gap: 10px;
+  gap: 9px;
   align-self: start;
+}
+
+.sidebar-title {
+  margin: 0 0 4px;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
 .sidebar-item {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
-  padding: 14px;
+  padding: 13px;
   text-align: left;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
-.sidebar-item span {
+.sidebar-item:hover {
+  border-color: rgba(23, 107, 93, 0.28);
+  box-shadow: 0 12px 28px rgba(31, 48, 39, 0.08);
+  transform: translateY(-1px);
+}
+
+.sidebar-kicker {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -67,16 +87,22 @@ const emit = defineEmits<{
 }
 
 .sidebar-item strong {
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--text);
-  font-size: 16px;
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .sidebar-item.active {
   background: var(--primary);
   border-color: var(--primary);
+  box-shadow: 0 14px 32px rgba(23, 107, 93, 0.18);
 }
 
-.sidebar-item.active span,
+.sidebar-item.active .sidebar-kicker,
 .sidebar-item.active strong {
   color: #ffffff;
 }
@@ -85,9 +111,13 @@ const emit = defineEmits<{
   .result-sidebar {
     position: static;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(140px, 1fr);
+    grid-auto-columns: minmax(190px, 1fr);
     overflow-x: auto;
     padding-bottom: 4px;
+  }
+
+  .sidebar-title {
+    display: none;
   }
 }
 </style>
