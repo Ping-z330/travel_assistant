@@ -5,6 +5,19 @@ from app.services.poi_service import PoiCandidate
 from app.services.weather_service import WeatherSnapshot
 
 
+@dataclass
+class RequirementAgentResult:
+    raw_text: str
+    pace: str
+    companions: list[str]
+    food_preferences: list[str]
+    hotel_preferences: list[str]
+    avoid: list[str]
+    route_preferences: list[str]
+    attractions_per_day: int
+    prompt_context: str
+
+
 # 景点Agent输出
 @dataclass
 class AttractionAgentResult:

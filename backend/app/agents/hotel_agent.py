@@ -1,6 +1,6 @@
 from time import perf_counter
 
-from app.agents.schemas import HotelAgentResult
+from app.agents.schemas import HotelAgentResult, RequirementAgentResult
 from app.models.trip import TripPlanRequest
 from app.services.hotel_service import (
     format_hotel_candidates_for_prompt,
@@ -11,7 +11,11 @@ from app.services.hotel_service import (
 class HotelAgent:
     """负责酒店候选搜索与酒店上下文整理。"""
 
-    def run(self, request: TripPlanRequest) -> HotelAgentResult:
+    def run(
+        self,
+        request: TripPlanRequest,
+        requirement_result: RequirementAgentResult | None = None,
+    ) -> HotelAgentResult:
         start = perf_counter()
         print(
             f"[HOTEL_AGENT] start city={request.city} days={request.days} budget={request.budget}"
@@ -19,7 +23,7 @@ class HotelAgent:
 
         # candidates得到搜索到的酒店候选列表，
         # prompt_context是将候选列表格式化为一个适合提示词使用的字符串，这些信息将被传递给 LLM 来生成旅行计划。
-        candidates = search_trip_hotel_candidates(request)
+        candidates = search_trip_hotel_candidates(request, requirement_result=requirement_result)
         prompt_context = format_hotel_candidates_for_prompt(candidates)
         elapsed_ms = round((perf_counter() - start) * 1000, 1)
 

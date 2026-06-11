@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from app.models.trip import TripPlanRequest
 from app.services.cache_utils import TTLCache
@@ -54,12 +55,14 @@ class PoiCandidate:
 def search_trip_poi_candidates(
     request: TripPlanRequest,
     *,
+    requirement_result: Any | None = None,
     per_keyword_limit: int = 5,
     total_limit: int = 8,
 ) -> list[PoiCandidate]:
     cache_key = (
         f"poi:{request.city.strip()}:{request.days}:"
-        f"{request.preference.strip()}:{per_keyword_limit}:{total_limit}"
+        f"{request.preference.strip()}:{_requirement_cache_fragment(requirement_result)}:"
+        f"{per_keyword_limit}:{total_limit}"
     )
     cached = POI_CACHE.get(cache_key)
     if cached is not None:
@@ -70,7 +73,7 @@ def search_trip_poi_candidates(
     seen_keys: set[tuple[str, str]] = set()
     seen_names: set[str] = set()
 
-    for keyword in build_search_keywords(request.preference):
+    for keyword in build_search_keywords(request.preference, requirement_result):
         raw_pois = search_text_pois(
             keyword,
             request.city,
@@ -125,7 +128,7 @@ def format_poi_candidates_for_prompt(candidates: list[PoiCandidate]) -> str:
     return "\n".join(lines)
 
 
-def build_search_keywords(preference: str) -> list[str]:
+def build_search_keywords(preference: str, requirement_result: Any | None = None) -> list[str]:
     parts = [
         item.strip()
         for item in re.split(r"[，,、/；;|]+", preference)
@@ -139,7 +142,11 @@ def build_search_keywords(preference: str) -> list[str]:
         else:
             keywords.append(f"{part} 景点")
 
-    keywords.append("热门景点")
+    for keyword in _build_requirement_keywords(requirement_result):
+        keywords.append(keyword)
+
+    if not _should_avoid_hot_keywords(requirement_result):
+        keywords.append("热门景点")
     keywords.append("旅游景点")
 
     deduped_keywords: list[str] = []
@@ -151,6 +158,60 @@ def build_search_keywords(preference: str) -> list[str]:
         deduped_keywords.append(keyword)
 
     return deduped_keywords
+
+
+def _build_requirement_keywords(requirement_result: Any | None) -> list[str]:
+    if requirement_result is None:
+        return []
+
+    keywords: list[str] = []
+    companions = set(getattr(requirement_result, "companions", []))
+    route_preferences = set(getattr(requirement_result, "route_preferences", []))
+    food_preferences = set(getattr(requirement_result, "food_preferences", []))
+    pace = getattr(requirement_result, "pace", "正常")
+
+    if {"老人同行", "父母同行", "长辈同行"} & companions or pace == "慢节奏":
+        keywords.extend(["公园", "博物馆", "城市休闲景点"])
+
+    if "亲子出行" in companions:
+        keywords.extend(["亲子景点", "科技馆", "动物园"])
+
+    if food_preferences:
+        keywords.extend(["美食街", "特色街区"])
+
+    if "博物馆" in route_preferences:
+        keywords.append("博物馆")
+    if "公园散步" in route_preferences:
+        keywords.append("公园")
+    if "夜景" in route_preferences:
+        keywords.append("夜景景点")
+    if "购物休闲" in route_preferences:
+        keywords.append("商圈")
+
+    return keywords
+
+
+def _should_avoid_hot_keywords(requirement_result: Any | None) -> bool:
+    if requirement_result is None:
+        return False
+
+    avoid = set(getattr(requirement_result, "avoid", []))
+    return bool({"拥挤景点", "网红打卡点", "长时间排队"} & avoid)
+
+
+def _requirement_cache_fragment(requirement_result: Any | None) -> str:
+    if requirement_result is None:
+        return "no_requirements"
+
+    return "|".join(
+        [
+            getattr(requirement_result, "pace", "正常"),
+            ",".join(getattr(requirement_result, "companions", [])),
+            ",".join(getattr(requirement_result, "food_preferences", [])),
+            ",".join(getattr(requirement_result, "avoid", [])),
+            ",".join(getattr(requirement_result, "route_preferences", [])),
+        ]
+    )
 
 
 def _normalize_poi_name(name: str) -> str:

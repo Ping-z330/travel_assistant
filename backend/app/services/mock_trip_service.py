@@ -8,13 +8,20 @@ from app.models.trip import (
     TripPlanRequest,
     WeatherInfo,
 )
+from app.agents.requirement_agent import RequirementAgent
 
 
 def build_mock_trip_plan(request: TripPlanRequest) -> TripPlan:
     city = request.city.strip()
+    requirement_result = RequirementAgent().run(request)
     template_days = _get_city_template(city, request.start_date)
     selected_days = _build_days_by_request(template_days, request.days, city)
     budget = _calculate_budget(selected_days, request.people)
+    requirements_text = (
+        f"，并参考“{request.requirements.strip()}”补充需求"
+        if request.requirements and request.requirements.strip()
+        else ""
+    )
 
     return TripPlan(
         city=city,
@@ -23,8 +30,10 @@ def build_mock_trip_plan(request: TripPlanRequest) -> TripPlan:
         budget=budget,
         overall_suggestion=(
             f"已根据 {request.people} 人、{request.budget} 元预算和"
-            f"“{request.preference}”偏好，为你生成 {city} 的示例旅行计划。"
+            f"“{request.preference}”偏好{requirements_text}，"
+            f"为你生成 {city} 的示例旅行计划。"
         ),
+        requirement_summary=RequirementAgent.to_summary(requirement_result),
     )
 
 
@@ -88,7 +97,7 @@ def _build_free_exploration_day(day: int, city: str) -> DayPlan:
                 visit_duration=180,
                 ticket_price=0,
                 description="根据个人体力和兴趣自由安排，适合补充购物、咖啡馆、夜景或小众街区。",
-                image_url="https://source.unsplash.com/900x600/?city,travel",
+                image_url="",
                 category="自由探索",
             ),
             Attraction(
@@ -98,7 +107,7 @@ def _build_free_exploration_day(day: int, city: str) -> DayPlan:
                 visit_duration=120,
                 ticket_price=0,
                 description="预留弹性时间，用来体验当地餐饮、市场和慢节奏城市生活。",
-                image_url="https://source.unsplash.com/900x600/?street,travel",
+                image_url="",
                 category="城市体验",
             ),
         ],
@@ -131,7 +140,7 @@ def _beijing_template(start_date: str) -> list[DayPlan]:
                     visit_duration=180,
                     ticket_price=60,
                     description="适合了解北京历史文化，是第一天的核心景点。",
-                    image_url="https://source.unsplash.com/900x600/?forbidden-city,beijing",
+                    image_url="",
                     category="历史文化",
                 ),
                 Attraction(
@@ -141,7 +150,7 @@ def _beijing_template(start_date: str) -> list[DayPlan]:
                     visit_duration=90,
                     ticket_price=10,
                     description="可以俯瞰故宫中轴线，适合傍晚散步。",
-                    image_url="https://source.unsplash.com/900x600/?beijing,park",
+                    image_url="",
                     category="城市公园",
                 ),
             ],
@@ -170,7 +179,7 @@ def _beijing_template(start_date: str) -> list[DayPlan]:
                     visit_duration=180,
                     ticket_price=30,
                     description="湖景和园林体验丰富，适合慢节奏游览。",
-                    image_url="https://source.unsplash.com/900x600/?summer-palace,beijing",
+                    image_url="",
                     category="皇家园林",
                 ),
                 Attraction(
@@ -180,7 +189,7 @@ def _beijing_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=10,
                     description="适合搭配颐和园安排在同一区域游玩。",
-                    image_url="https://source.unsplash.com/900x600/?yuanmingyuan,beijing",
+                    image_url="",
                     category="历史遗址",
                 ),
             ],
@@ -209,7 +218,7 @@ def _beijing_template(start_date: str) -> list[DayPlan]:
                     visit_duration=240,
                     ticket_price=40,
                     description="北京代表性景点，适合安排半天以上。",
-                    image_url="https://source.unsplash.com/900x600/?great-wall,china",
+                    image_url="",
                     category="世界遗产",
                 ),
                 Attraction(
@@ -219,7 +228,7 @@ def _beijing_template(start_date: str) -> list[DayPlan]:
                     visit_duration=90,
                     ticket_price=0,
                     description="返程后可轻松打卡鸟巢和水立方外景。",
-                    image_url="https://source.unsplash.com/900x600/?beijing,olympic-park",
+                    image_url="",
                     category="城市地标",
                 ),
             ],
@@ -253,7 +262,7 @@ def _hangzhou_template(start_date: str) -> list[DayPlan]:
                     visit_duration=210,
                     ticket_price=0,
                     description="杭州最具代表性的湖景路线，适合慢慢散步和拍照。",
-                    image_url="https://source.unsplash.com/900x600/?west-lake,hangzhou",
+                    image_url="",
                     category="自然风光",
                 ),
                 Attraction(
@@ -263,7 +272,7 @@ def _hangzhou_template(start_date: str) -> list[DayPlan]:
                     visit_duration=90,
                     ticket_price=40,
                     description="适合傍晚登塔看西湖全景，也能串联白蛇传传说。",
-                    image_url="https://source.unsplash.com/900x600/?hangzhou,pagoda",
+                    image_url="",
                     category="人文地标",
                 ),
             ],
@@ -292,7 +301,7 @@ def _hangzhou_template(start_date: str) -> list[DayPlan]:
                     visit_duration=180,
                     ticket_price=80,
                     description="适合喜欢自然风光和慢节奏体验的游客。",
-                    image_url="https://source.unsplash.com/900x600/?wetland,hangzhou",
+                    image_url="",
                     category="自然生态",
                 ),
                 Attraction(
@@ -302,7 +311,7 @@ def _hangzhou_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="可以体验茶园风景和杭州本地茶文化。",
-                    image_url="https://source.unsplash.com/900x600/?tea-field,hangzhou",
+                    image_url="",
                     category="茶文化",
                 ),
             ],
@@ -331,7 +340,7 @@ def _hangzhou_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="适合体验杭州老街、小吃和伴手礼。",
-                    image_url="https://source.unsplash.com/900x600/?hangzhou,old-street",
+                    image_url="",
                     category="城市烟火",
                 ),
                 Attraction(
@@ -341,7 +350,7 @@ def _hangzhou_template(start_date: str) -> list[DayPlan]:
                     visit_duration=210,
                     ticket_price=320,
                     description="适合集中体验宋韵文化和大型演出。",
-                    image_url="https://source.unsplash.com/900x600/?song-dynasty,hangzhou",
+                    image_url="",
                     category="文化演艺",
                 ),
             ],
@@ -375,7 +384,7 @@ def _chengdu_template(start_date: str) -> list[DayPlan]:
                     visit_duration=210,
                     ticket_price=55,
                     description="建议上午前往，更容易看到熊猫活动。",
-                    image_url="https://source.unsplash.com/900x600/?panda,chengdu",
+                    image_url="",
                     category="亲子自然",
                 ),
                 Attraction(
@@ -385,7 +394,7 @@ def _chengdu_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="适合下午慢逛，体验成都茶馆和街巷生活。",
-                    image_url="https://source.unsplash.com/900x600/?chengdu,street",
+                    image_url="",
                     category="城市街区",
                 ),
             ],
@@ -414,7 +423,7 @@ def _chengdu_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=50,
                     description="适合了解三国文化，也能和锦里一起安排。",
-                    image_url="https://source.unsplash.com/900x600/?chengdu,temple",
+                    image_url="",
                     category="历史人文",
                 ),
                 Attraction(
@@ -424,7 +433,7 @@ def _chengdu_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="适合傍晚和夜间游览，美食和灯光氛围更好。",
-                    image_url="https://source.unsplash.com/900x600/?chengdu,night-market",
+                    image_url="",
                     category="美食街区",
                 ),
             ],
@@ -453,7 +462,7 @@ def _chengdu_template(start_date: str) -> list[DayPlan]:
                     visit_duration=180,
                     ticket_price=80,
                     description="适合了解水利工程和川西历史。",
-                    image_url="https://source.unsplash.com/900x600/?dujiangyan,china",
+                    image_url="",
                     category="世界遗产",
                 ),
                 Attraction(
@@ -463,7 +472,7 @@ def _chengdu_template(start_date: str) -> list[DayPlan]:
                     visit_duration=210,
                     ticket_price=80,
                     description="山林清幽，适合喜欢自然和轻徒步的游客。",
-                    image_url="https://source.unsplash.com/900x600/?qingcheng-mountain",
+                    image_url="",
                     category="自然山水",
                 ),
             ],
@@ -497,7 +506,7 @@ def _shanghai_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="上海城市名片，适合傍晚到夜间欣赏浦江两岸。",
-                    image_url="https://source.unsplash.com/900x600/?shanghai,bund",
+                    image_url="",
                     category="城市地标",
                 ),
                 Attraction(
@@ -507,7 +516,7 @@ def _shanghai_template(start_date: str) -> list[DayPlan]:
                     visit_duration=150,
                     ticket_price=199,
                     description="适合俯瞰陆家嘴天际线，体验城市高度。",
-                    image_url="https://source.unsplash.com/900x600/?shanghai,tower",
+                    image_url="",
                     category="观景地标",
                 ),
             ],
@@ -536,7 +545,7 @@ def _shanghai_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=40,
                     description="适合体验江南园林和上海老城厢文化。",
-                    image_url="https://source.unsplash.com/900x600/?shanghai,yuyuan",
+                    image_url="",
                     category="园林文化",
                 ),
                 Attraction(
@@ -546,7 +555,7 @@ def _shanghai_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="适合逛创意小店、咖啡馆和弄堂空间。",
-                    image_url="https://source.unsplash.com/900x600/?shanghai,alley",
+                    image_url="",
                     category="创意街区",
                 ),
             ],
@@ -575,7 +584,7 @@ def _shanghai_template(start_date: str) -> list[DayPlan]:
                     visit_duration=150,
                     ticket_price=0,
                     description="适合喜欢历史与艺术的人群，室内安排也适合雨天。",
-                    image_url="https://source.unsplash.com/900x600/?museum,shanghai",
+                    image_url="",
                     category="艺术展馆",
                 ),
                 Attraction(
@@ -585,7 +594,7 @@ def _shanghai_template(start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="适合下午散步、骑行和看日落。",
-                    image_url="https://source.unsplash.com/900x600/?shanghai,riverfront",
+                    image_url="",
                     category="滨江休闲",
                 ),
             ],
@@ -619,7 +628,7 @@ def _default_city_template(city: str, start_date: str) -> list[DayPlan]:
                     visit_duration=150,
                     ticket_price=0,
                     description="优先安排城市代表性地标，帮助快速建立目的地印象。",
-                    image_url="https://source.unsplash.com/900x600/?city,landmark",
+                    image_url="",
                     category="城市地标",
                 ),
                 Attraction(
@@ -629,7 +638,7 @@ def _default_city_template(city: str, start_date: str) -> list[DayPlan]:
                     visit_duration=120,
                     ticket_price=0,
                     description="适合体验当地餐饮、购物和街区氛围。",
-                    image_url="https://source.unsplash.com/900x600/?old-street,travel",
+                    image_url="",
                     category="城市街区",
                 ),
             ],

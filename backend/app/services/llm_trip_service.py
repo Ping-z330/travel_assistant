@@ -1,6 +1,8 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.agents.prompt_builder import build_trip_prompt
+from app.agents.requirement_agent import RequirementAgent
 from app.models.trip import TripPlan, TripPlanRequest
 from app.services.hotel_service import (
     HotelCandidate,
@@ -23,9 +25,13 @@ def build_llm_trip_plan(request: TripPlanRequest) -> TripPlan:
     poi_candidates: list[PoiCandidate] = []
     weather_snapshot: WeatherSnapshot | None = None
     hotel_candidates: list[HotelCandidate] = []
+    requirement_result = RequirementAgent().run(request)
 
     try:
-        poi_candidates = search_trip_poi_candidates(request)
+        poi_candidates = search_trip_poi_candidates(
+            request,
+            requirement_result=requirement_result,
+        )
     except Exception as exc:
         print(f"[AMAP_POI_WARN] Failed to search POIs: {exc}")
 
@@ -35,12 +41,16 @@ def build_llm_trip_plan(request: TripPlanRequest) -> TripPlan:
         print(f"[AMAP_WEATHER_WARN] Failed to query weather: {exc}")
 
     try:
-        hotel_candidates = search_trip_hotel_candidates(request)
+        hotel_candidates = search_trip_hotel_candidates(
+            request,
+            requirement_result=requirement_result,
+        )
     except Exception as exc:
         print(f"[AMAP_HOTEL_WARN] Failed to search hotels: {exc}")
 
     prompt = build_trip_prompt(
         request=request,
+        requirement_result=requirement_result,
         poi_candidates=poi_candidates,
         weather_snapshot=weather_snapshot,
         hotel_candidates=hotel_candidates,
@@ -49,10 +59,14 @@ def build_llm_trip_plan(request: TripPlanRequest) -> TripPlan:
     try:
         content = call_deepseek(prompt)
         trip_plan = parse_llm_trip_plan(content)
-        return normalize_trip_plan(trip_plan, request, hotel_candidates)
+        result = normalize_trip_plan(trip_plan, request, hotel_candidates)
+        result.requirement_summary = RequirementAgent.to_summary(requirement_result)
+        return result
     except Exception as exc:
         print(f"[LLM_FALLBACK] DeepSeek generation failed: {exc}")
-        return build_mock_trip_plan(request)
+        result = build_mock_trip_plan(request)
+        result.requirement_summary = RequirementAgent.to_summary(requirement_result)
+        return result
 def parse_llm_trip_plan(content: str) -> TripPlan:
     data = json.loads(content)
     _fill_missing_hotels(data)
@@ -107,14 +121,6 @@ def normalize_trip_plan(
                 )
             )
 
-        for attraction in day.attractions:
-            if attraction.image_url is None:
-                attraction.image_url = ""
-            if not attraction.image_url:
-                image_result = _safe_search_attraction_image(attraction.name, request.city)
-                if image_result:
-                    attraction.image_url = image_result.image_url
-
         if (
             not day.hotel.name.strip()
             or not day.hotel.address.strip()
@@ -122,6 +128,8 @@ def normalize_trip_plan(
             or day.hotel.location is None
         ):
             day.hotel = _build_fallback_hotel(request.city, hotel_candidates)
+
+    _enrich_missing_attraction_images(trip_plan, request.city)
 
     trip_plan.budget.total = (
         trip_plan.budget.total_attractions
@@ -131,6 +139,43 @@ def normalize_trip_plan(
     )
 
     return trip_plan
+
+
+def _enrich_missing_attraction_images(trip_plan: TripPlan, city: str) -> None:
+    attractions = [
+        attraction
+        for day in trip_plan.days
+        for attraction in day.attractions
+    ]
+
+    missing_image_attractions = []
+    seen_names: set[str] = set()
+    for attraction in attractions:
+        if attraction.image_url is None:
+            attraction.image_url = ""
+
+        normalized_name = _normalize_attraction_name(attraction.name)
+        if attraction.image_url or normalized_name in seen_names:
+            continue
+
+        seen_names.add(normalized_name)
+        missing_image_attractions.append(attraction)
+
+    if not missing_image_attractions:
+        return
+
+    max_workers = min(4, len(missing_image_attractions))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_attraction = {
+            executor.submit(_safe_search_attraction_image, attraction.name, city): attraction
+            for attraction in missing_image_attractions
+        }
+
+        for future in as_completed(future_to_attraction):
+            attraction = future_to_attraction[future]
+            image_result = future.result()
+            if image_result:
+                attraction.image_url = image_result.image_url
 
 
 def _dedupe_day_attractions(attractions: list, seen_attraction_names: set[str]) -> list:
@@ -201,7 +246,7 @@ def _safe_search_attraction_image(name: str, city: str):
     try:
         return search_attraction_image(name, city)
     except Exception as exc:
-        print(f"[UNSPLASH_WARN] Failed to search image for {name}: {exc}")
+        print(f"[IMAGE_WARN] Failed to search image for {name}: {exc}")
         return None
 
 

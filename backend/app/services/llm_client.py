@@ -14,7 +14,7 @@ def call_deepseek(prompt: str) -> str:
     if not api_key:
         raise RuntimeError("DEEPSEEK_API_KEY is not configured")
 
-    client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+    client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL, timeout=30.0)
     response = client.chat.completions.create(
         model=model,
         messages=[

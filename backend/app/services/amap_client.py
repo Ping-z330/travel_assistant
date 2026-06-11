@@ -139,8 +139,8 @@ def _request_json(
     url: str,
     *,
     params: dict,
-    timeout: float = 8.0,
-    max_retries: int = 2,
+    timeout: float = 5.0,
+    max_retries: int = 1,
 ) -> dict:
     last_error: Exception | None = None
 

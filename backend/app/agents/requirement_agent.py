@@ -1,0 +1,189 @@
+from app.agents.schemas import RequirementAgentResult
+from app.models.trip import RequirementSummary, TripPlanRequest
+
+
+class RequirementAgent:
+    """解析用户补充需求，生成稳定的结构化旅行约束。"""
+
+    def run(self, request: TripPlanRequest) -> RequirementAgentResult:
+        raw_text = (request.requirements or "").strip()
+        text = f"{request.preference} {raw_text}".lower()
+
+        pace = self._detect_pace(text)
+        companions = self._detect_items(
+            text,
+            {
+                "老人": "老人同行",
+                "父母": "父母同行",
+                "爸妈": "父母同行",
+                "长辈": "长辈同行",
+                "孩子": "亲子出行",
+                "小孩": "亲子出行",
+                "儿童": "亲子出行",
+                "宝宝": "亲子出行",
+                "情侣": "情侣出行",
+                "拍照": "拍照打卡",
+            },
+        )
+        food_preferences = self._detect_items(
+            text,
+            {
+                "小吃": "本地小吃",
+                "美食": "美食探索",
+                "夜市": "夜市",
+                "本地菜": "本地菜",
+                "特色菜": "地方特色餐饮",
+                "咖啡": "咖啡馆",
+                "素食": "素食友好",
+                "清淡": "清淡饮食",
+            },
+        )
+        hotel_preferences = self._detect_items(
+            text,
+            {
+                "舒适": "舒适住宿",
+                "安静": "安静住宿",
+                "交通便利": "交通便利",
+                "地铁": "靠近地铁",
+                "市中心": "市中心",
+                "亲子酒店": "亲子友好",
+                "高档": "高档酒店",
+                "便宜": "预算友好",
+                "省钱": "预算友好",
+            },
+        )
+        avoid = self._detect_items(
+            text,
+            {
+                "人多": "拥挤景点",
+                "排队": "长时间排队",
+                "网红": "网红打卡点",
+                "太累": "高强度行程",
+                "爬山": "爬山或大量台阶",
+                "暴晒": "长时间暴晒",
+                "贵": "高消费项目",
+            },
+        )
+        route_preferences = self._detect_items(
+            text,
+            {
+                "自然": "自然风光",
+                "历史": "历史人文",
+                "博物馆": "博物馆",
+                "公园": "公园散步",
+                "购物": "购物休闲",
+                "夜景": "夜景",
+                "轻松": "轻松路线",
+                "深度": "深度游",
+            },
+        )
+
+        attractions_per_day = self._recommend_attractions_per_day(
+            pace=pace,
+            companions=companions,
+            avoid=avoid,
+        )
+        prompt_context = self._format_prompt_context(
+            raw_text=raw_text,
+            pace=pace,
+            companions=companions,
+            food_preferences=food_preferences,
+            hotel_preferences=hotel_preferences,
+            avoid=avoid,
+            route_preferences=route_preferences,
+            attractions_per_day=attractions_per_day,
+        )
+
+        print(
+            "[REQUIREMENT_AGENT] "
+            f"pace={pace} companions={len(companions)} avoid={len(avoid)} "
+            f"attractions_per_day={attractions_per_day}"
+        )
+
+        return RequirementAgentResult(
+            raw_text=raw_text,
+            pace=pace,
+            companions=companions,
+            food_preferences=food_preferences,
+            hotel_preferences=hotel_preferences,
+            avoid=avoid,
+            route_preferences=route_preferences,
+            attractions_per_day=attractions_per_day,
+            prompt_context=prompt_context,
+        )
+
+    @staticmethod
+    def to_summary(result: RequirementAgentResult) -> RequirementSummary:
+        return RequirementSummary(
+            raw_text=result.raw_text,
+            pace=result.pace,
+            companions=result.companions,
+            food_preferences=result.food_preferences,
+            hotel_preferences=result.hotel_preferences,
+            avoid=result.avoid,
+            route_preferences=result.route_preferences,
+            attractions_per_day=result.attractions_per_day,
+        )
+
+    @staticmethod
+    def _detect_pace(text: str) -> str:
+        if any(keyword in text for keyword in ["慢", "轻松", "休闲", "不要太累", "不赶"]):
+            return "慢节奏"
+        if any(keyword in text for keyword in ["紧凑", "多逛", "多玩", "充实", "特种兵"]):
+            return "紧凑"
+        return "正常"
+
+    @staticmethod
+    def _detect_items(text: str, keyword_map: dict[str, str]) -> list[str]:
+        items: list[str] = []
+        seen: set[str] = set()
+        for keyword, label in keyword_map.items():
+            if keyword in text and label not in seen:
+                items.append(label)
+                seen.add(label)
+        return items
+
+    @staticmethod
+    def _recommend_attractions_per_day(
+        *,
+        pace: str,
+        companions: list[str],
+        avoid: list[str],
+    ) -> int:
+        if pace == "慢节奏":
+            return 2
+        if any(item in companions for item in ["老人同行", "父母同行", "长辈同行", "亲子出行"]):
+            return 2
+        if "高强度行程" in avoid:
+            return 2
+        if pace == "紧凑":
+            return 3
+        return 2
+
+    @staticmethod
+    def _format_prompt_context(
+        *,
+        raw_text: str,
+        pace: str,
+        companions: list[str],
+        food_preferences: list[str],
+        hotel_preferences: list[str],
+        avoid: list[str],
+        route_preferences: list[str],
+        attractions_per_day: int,
+    ) -> str:
+        def format_list(items: list[str]) -> str:
+            return "、".join(items) if items else "无明确要求"
+
+        return "\n".join(
+            [
+                f"- 原始补充需求：{raw_text or '无'}",
+                f"- 行程节奏：{pace}",
+                f"- 同行人特征：{format_list(companions)}",
+                f"- 餐饮偏好：{format_list(food_preferences)}",
+                f"- 住宿偏好：{format_list(hotel_preferences)}",
+                f"- 避开事项：{format_list(avoid)}",
+                f"- 路线偏好：{format_list(route_preferences)}",
+                f"- 建议每天景点数：{attractions_per_day}",
+            ]
+        )

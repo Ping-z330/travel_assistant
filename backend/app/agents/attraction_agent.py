@@ -1,6 +1,6 @@
 from time import perf_counter
 
-from app.agents.schemas import AttractionAgentResult
+from app.agents.schemas import AttractionAgentResult, RequirementAgentResult
 from app.models.trip import TripPlanRequest
 from app.services.poi_service import (
     format_poi_candidates_for_prompt,
@@ -12,14 +12,18 @@ from app.services.poi_service import (
 class AttractionAgent:
     """负责景点候选搜索与景点上下文整理。"""
 
-    def run(self, request: TripPlanRequest) -> AttractionAgentResult:
+    def run(
+        self,
+        request: TripPlanRequest,
+        requirement_result: RequirementAgentResult | None = None,
+    ) -> AttractionAgentResult:
         # 记录开始时间，并打印日志信息，包括目的地城市和旅行偏好等关键信息，方便后续的性能监控和调试。
         start = perf_counter()
         print(f"[ATTRACTION_AGENT] start city={request.city} preference={request.preference}")
 
         # candidates得到搜索到的景点候选列表，
         # prompt_context是将候选列表格式化为一个适合提示词使用的字符串，这些信息将被传递给 LLM 来生成旅行计划。
-        candidates = search_trip_poi_candidates(request)
+        candidates = search_trip_poi_candidates(request, requirement_result=requirement_result)
         prompt_context = format_poi_candidates_for_prompt(candidates)
         elapsed_ms = round((perf_counter() - start) * 1000, 1)
 

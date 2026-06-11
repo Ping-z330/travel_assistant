@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from app.models.trip import TripPlanRequest
 from app.services.amap_client import geocode_city, search_around_pois
@@ -26,18 +27,23 @@ HOTEL_CACHE = TTLCache(ttl_seconds=1800)
 
 
 # search_trip_hotel_candidates 函数负责根据预算生成关键词，并在目标城市中心点周边搜索酒店候选。
-def search_trip_hotel_candidates(request: TripPlanRequest) -> list[HotelCandidate]:
+def search_trip_hotel_candidates(
+    request: TripPlanRequest,
+    *,
+    requirement_result: Any | None = None,
+) -> list[HotelCandidate]:
     """根据预算生成关键词，并在目标城市中心点周边搜索酒店候选。"""
     cache_key = (
         f"hotel:{request.city.strip()}:{request.days}:"
-        f"{request.budget}:{request.preference.strip()}"
+        f"{request.budget}:{request.preference.strip()}:"
+        f"{_requirement_cache_fragment(requirement_result)}"
     )
     cached = HOTEL_CACHE.get(cache_key)
     if cached is not None:
         print(f"[HOTEL_CACHE] hit city={request.city}")
         return cached
 
-    keywords = build_hotel_keywords(request)
+    keywords = build_hotel_keywords(request, requirement_result)
     center = resolve_city_center(request.city)
     candidates: list[HotelCandidate] = []
     seen_names: set[str] = set()
@@ -70,16 +76,28 @@ def search_trip_hotel_candidates(request: TripPlanRequest) -> list[HotelCandidat
 
 
 # build_hotel_keywords 函数根据用户的预算生成不同档位的酒店搜索关键词，帮助提高搜索结果的相关性和质量。
-def build_hotel_keywords(request: TripPlanRequest) -> list[str]:
+def build_hotel_keywords(
+    request: TripPlanRequest,
+    requirement_result: Any | None = None,
+) -> list[str]:
     """按人均日预算生成不同档位的酒店搜索关键词。"""
+    requirement_keywords = _build_requirement_hotel_keywords(requirement_result)
+    if _has_budget_friendly_requirement(requirement_result):
+        return _dedupe_keywords(
+            ["经济型酒店", "快捷酒店", "高评分酒店", *requirement_keywords]
+        )
+
     budget_per_day = request.budget / max(request.days, 1)
 
     if budget_per_day <= 600:
-        return ["经济型酒店", "快捷酒店", "高评分酒店"]
-    if budget_per_day <= 1200:
-        return ["舒适型酒店", "精品酒店", "高评分酒店"]
+        keywords = ["经济型酒店", "快捷酒店", "高评分酒店"]
+    elif budget_per_day <= 1200:
+        keywords = ["舒适型酒店", "精品酒店", "高评分酒店"]
+    else:
+        keywords = ["高档酒店", "豪华酒店", "高评分酒店"]
 
-    return ["高档酒店", "豪华酒店", "高评分酒店"]
+    keywords.extend(requirement_keywords)
+    return _dedupe_keywords(keywords)
 
 
 # format_hotel_candidates_for_prompt 函数把酒店候选整理成适合注入 LLM Prompt 的文本，
@@ -152,3 +170,60 @@ def _build_price_hint(request: TripPlanRequest) -> str:
         return "建议选择舒适型或精品酒店"
 
     return "预算充足，可优先考虑高档或豪华酒店"
+
+
+def _build_requirement_hotel_keywords(requirement_result: Any | None) -> list[str]:
+    if requirement_result is None:
+        return []
+
+    preferences = set(getattr(requirement_result, "hotel_preferences", []))
+    companions = set(getattr(requirement_result, "companions", []))
+
+    keywords: list[str] = []
+    if {"交通便利", "靠近地铁"} & preferences:
+        keywords.extend(["地铁站 酒店", "交通便利酒店"])
+    if {"舒适住宿", "安静住宿"} & preferences:
+        keywords.extend(["舒适型酒店", "精品酒店"])
+    if "市中心" in preferences:
+        keywords.append("市中心酒店")
+    if "亲子友好" in preferences or "亲子出行" in companions:
+        keywords.append("亲子酒店")
+    if "高档酒店" in preferences:
+        keywords.append("高档酒店")
+    if "预算友好" in preferences:
+        keywords.extend(["经济型酒店", "快捷酒店"])
+
+    return keywords
+
+
+def _has_budget_friendly_requirement(requirement_result: Any | None) -> bool:
+    if requirement_result is None:
+        return False
+
+    preferences = set(getattr(requirement_result, "hotel_preferences", []))
+    return "预算友好" in preferences
+
+
+def _dedupe_keywords(keywords: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for keyword in keywords:
+        if keyword in seen:
+            continue
+        seen.add(keyword)
+        deduped.append(keyword)
+    return deduped
+
+
+def _requirement_cache_fragment(requirement_result: Any | None) -> str:
+    if requirement_result is None:
+        return "no_requirements"
+
+    return "|".join(
+        [
+            getattr(requirement_result, "pace", "正常"),
+            ",".join(getattr(requirement_result, "companions", [])),
+            ",".join(getattr(requirement_result, "hotel_preferences", [])),
+            ",".join(getattr(requirement_result, "avoid", [])),
+        ]
+    )

@@ -6,7 +6,7 @@
 
 - 基于 `DeepSeek` 生成多日旅行计划
 - 接入高德真实 `POI`、天气、酒店数据
-- 接入 `Unsplash` 景点图片
+- 接入 `Pexels` 景点图片
 - 支持动态城市解析，不依赖固定城市映射表
 - 支持地图展示、酒店点位展示与按天路线区分
 - 支持 PDF 导出
@@ -62,7 +62,7 @@
 - 景点：高德 POI 搜索 + 清洗去重
 - 天气：高德天气查询
 - 酒店：高德酒店候选搜索 + 坐标
-- 图片：Unsplash 搜图
+- 图片：Pexels 搜图
 
 ### 3. 地图展示
 
@@ -141,7 +141,7 @@ travel-assistant/
 - DeepSeek API
 - 高德 Web Service API
 - 高德 JSAPI
-- Unsplash API
+- Pexels API
 
 ## 环境变量
 
@@ -152,7 +152,7 @@ TRIP_PLAN_MODE=llm
 DEEPSEEK_API_KEY=your_deepseek_key
 DEEPSEEK_MODEL=deepseek-v4-flash
 AMAP_WEB_API_KEY=your_amap_webservice_key
-UNSPLASH_ACCESS_KEY=your_unsplash_access_key
+PEXELS_API_KEY=your_pexels_api_key
 ```
 
 ### 前端 `frontend/.env.local`

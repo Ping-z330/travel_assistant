@@ -1,15 +1,31 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import type { Attraction } from '../../types/trip'
 
-defineProps<{
+const props = defineProps<{
   attraction: Attraction
 }>()
+
+const imageFailed = ref(false)
+const shouldShowImage = computed(() => Boolean(props.attraction.image_url) && !imageFailed.value)
+
+watch(
+  () => props.attraction.image_url,
+  () => {
+    imageFailed.value = false
+  },
+)
 </script>
 
 <template>
   <article class="attraction-card">
     <div class="attraction-image">
-      <img v-if="attraction.image_url" :src="attraction.image_url" :alt="attraction.name" />
+      <img
+        v-if="shouldShowImage"
+        :src="attraction.image_url"
+        :alt="attraction.name"
+        @error="imageFailed = true"
+      />
       <span v-else>{{ attraction.name.slice(0, 1) }}</span>
     </div>
 

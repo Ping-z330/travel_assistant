@@ -9,6 +9,7 @@ from time import perf_counter
 from app.agents.attraction_agent import AttractionAgent
 from app.agents.hotel_agent import HotelAgent
 from app.agents.prompt_builder import build_trip_prompt
+from app.agents.requirement_agent import RequirementAgent
 from app.agents.weather_agent import WeatherAgent
 
 # call_deepseek函数是一个封装了调用 DeepSeek API 的函数，
@@ -28,6 +29,7 @@ class PlannerAgent:
 
     def __init__(self) -> None:
         # 初始化三个子 Agent 的实例
+        self.requirement_agent = RequirementAgent()
         self.attraction_agent = AttractionAgent()
         self.weather_agent = WeatherAgent()
         self.hotel_agent = HotelAgent()
@@ -41,6 +43,7 @@ class PlannerAgent:
             f"[PLANNER_AGENT] start city={request.city} days={request.days} "
             f"budget={request.budget} people={request.people}"
         )
+        requirement_result = self.requirement_agent.run(request)
 
         # 使用 ThreadPoolExecutor 来并行调用三个子 Agent 的 run 方法，分别获取景点候选列表、天气快照和酒店候选列表。
         with ThreadPoolExecutor(max_workers=3) as executor:
@@ -52,6 +55,7 @@ class PlannerAgent:
                 "ATTRACTION_AGENT",
                 self.attraction_agent.run,
                 request,
+                requirement_result,
             )
             # 天气快照
             weather_future = executor.submit(
@@ -66,6 +70,7 @@ class PlannerAgent:
                 "HOTEL_AGENT",
                 self.hotel_agent.run,
                 request,
+                requirement_result,
             )
 
             # 接收三个子 Agent 的结果，如果某个 Agent 发生异常导致结果为 None，后续的处理逻辑也会相应地进行调整，确保系统的鲁棒性。
@@ -81,6 +86,7 @@ class PlannerAgent:
         # build_trip_prompt 函数是一个辅助函数，用于根据用户的旅行需求和从子 Agent 获取的信息来构建一个适合 LLM 处理的提示词。
         prompt = build_trip_prompt(
             request=request,
+            requirement_result=requirement_result,
             poi_candidates=poi_candidates,
             weather_snapshot=weather_snapshot,
             hotel_candidates=hotel_candidates,
@@ -93,6 +99,7 @@ class PlannerAgent:
             content = call_deepseek(prompt)
             trip_plan = parse_llm_trip_plan(content)
             result = normalize_trip_plan(trip_plan, request, hotel_candidates)
+            result.requirement_summary = self.requirement_agent.to_summary(requirement_result)
             # llm_elapsed_ms 和 total_elapsed_ms 分别记录了调用 LLM 的耗时和整个 run 方法的总耗时，
             # 这些信息对于性能监控和优化非常有用。
             llm_elapsed_ms = round((perf_counter() - llm_start) * 1000, 1)
@@ -109,14 +116,16 @@ class PlannerAgent:
         except Exception as exc:
             total_elapsed_ms = round((perf_counter() - total_start) * 1000, 1)
             print(f"[PLANNER_AGENT_FALLBACK] {exc} total_elapsed_ms={total_elapsed_ms}")
-            return build_mock_trip_plan(request)
+            result = build_mock_trip_plan(request)
+            result.requirement_summary = self.requirement_agent.to_summary(requirement_result)
+            return result
 
     # _run_agent_safely 是一个静态方法，用于安全地调用子 Agent 的 run 方法。
     # 如果在调用过程中发生任何异常，它会捕获异常并记录日志，而不是让整个 PlannerAgent 失败。
     @staticmethod
-    def _run_agent_safely(agent_name: str, agent_runner, request: TripPlanRequest):
+    def _run_agent_safely(agent_name: str, agent_runner, request: TripPlanRequest, *args):
         try:
-            return agent_runner(request)
+            return agent_runner(request, *args)
         except Exception as exc:
             print(f"[{agent_name}_WARN] {exc}")
             return None

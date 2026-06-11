@@ -10,6 +10,7 @@ class TripPlanRequest(BaseModel):
     budget: int = Field(..., ge=0, description="总预算")
     people: int = Field(..., ge=1, le=20, description="出行人数")
     preference: str = Field(..., description="旅行偏好")
+    requirements: Optional[str] = Field(None, description="补充需求")
 
 
 class Location(BaseModel):
@@ -60,9 +61,21 @@ class Budget(BaseModel):
     total: int
 
 
+class RequirementSummary(BaseModel):
+    raw_text: str = ""
+    pace: str = "正常"
+    companions: List[str] = []
+    food_preferences: List[str] = []
+    hotel_preferences: List[str] = []
+    avoid: List[str] = []
+    route_preferences: List[str] = []
+    attractions_per_day: int = 2
+
+
 class TripPlan(BaseModel):
     city: str
     start_date: str
     days: List[DayPlan]
     budget: Budget
     overall_suggestion: str
+    requirement_summary: Optional[RequirementSummary] = None

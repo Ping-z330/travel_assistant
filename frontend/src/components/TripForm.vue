@@ -13,6 +13,7 @@ const form = reactive({
   budget: 3000,
   people: 2,
   preference: '自然风光',
+  requirements: '',
 })
 
 const loading = ref(false)
@@ -31,6 +32,7 @@ const handleSubmit = async () => {
       budget: form.budget,
       people: form.people,
       preference: form.preference,
+      requirements: form.requirements.trim() || undefined,
     }
 
     const response = await generateTripPlan(request)
@@ -103,6 +105,16 @@ const handleSubmit = async () => {
               {{ item }}
             </option>
           </select>
+        </label>
+
+        <label>
+          <span>补充需求</span>
+          <textarea
+            v-model.trim="form.requirements"
+            rows="4"
+            maxlength="300"
+            placeholder="例如：带父母出行，节奏慢一点，想吃本地小吃，尽量避开人多的网红景点。"
+          />
         </label>
 
         <button class="submit-button" type="submit" :disabled="loading">
@@ -263,7 +275,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
@@ -279,10 +292,18 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   background: #ffffff;
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(23, 107, 93, 0.12);
+}
+
+textarea {
+  min-height: 104px;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.6;
 }
 
 .submit-button {

@@ -5,6 +5,7 @@ export interface TripPlanRequest {
   budget: number
   people: number
   preference: string
+  requirements?: string
 }
 
 export interface Location {
@@ -55,10 +56,22 @@ export interface Budget {
   total: number
 }
 
+export interface RequirementSummary {
+  raw_text: string
+  pace: string
+  companions: string[]
+  food_preferences: string[]
+  hotel_preferences: string[]
+  avoid: string[]
+  route_preferences: string[]
+  attractions_per_day: number
+}
+
 export interface TripPlan {
   city: string
   start_date: string
   days: DayPlan[]
   budget: Budget
   overall_suggestion: string
+  requirement_summary?: RequirementSummary
 }

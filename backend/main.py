@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.trip import router as trip_router
 from app.api.trip_debug import router as trip_debug_router
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 app = FastAPI(title="AI Travel Assistant API")
 
