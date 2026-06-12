@@ -33,6 +33,29 @@
 - `智能体层`：负责景点搜索、天气查询、酒店推荐、行程规划等专门任务。
 - `外部服务层`：负责对接高德地图、天气服务、LLM API 等能力。
 
+## 当前实现状态
+
+当前代码已经落地了第一版多智能体协作，不再是单一 Planner 直接拼接整份计划。现有链路是：
+
+```text
+TripPlanRequest
+-> PlannerAgent
+   -> RequirementAgent
+   -> AttractionAgent
+   -> WeatherAgent
+   -> HotelAgent
+   -> TripPlanGenerator
+   -> TripPlan
+```
+
+其中：
+
+- `PlannerAgent` 负责编排、并行调度和 fallback。
+- `TripPlanGenerator` 负责 prompt 组装、LLM 调用和结果标准化。
+- `RequirementAgent` 负责把补充需求解析成更稳定的结构化约束。
+
+这些实现细节的说明见仓库根目录的 [README.md](README.md) 和 [docs/agent-architecture.md](docs/agent-architecture.md)。
+
 ## 阶段一：假数据 MVP
 
 ### 阶段目标
@@ -255,13 +278,15 @@ flowchart LR
 
 ### 阶段目标
 
-将单一 Planner 拆成多个职责清晰的 Agent，形成最终的多智能体协作架构。
+将单一 Planner 拆成多个职责清晰的 Agent，形成最终的多智能体协作架构。本阶段对应的核心实现已经在代码中落地，当前重点转向继续增强稳定性和可扩展性。
 
 ### 智能体设计
 
-- `AttractionSearchAgent`：根据城市和偏好搜索景点，返回景点候选列表。
-- `WeatherQueryAgent`：查询天气，返回每日天气和出行建议。
+- `RequirementAgent`：解析用户偏好、补充需求和出行约束。
+- `AttractionAgent`：根据城市和偏好搜索景点，返回景点候选列表。
+- `WeatherAgent`：查询天气，返回每日天气和出行建议。
 - `HotelAgent`：根据预算、位置和出行人数推荐酒店。
+- `TripPlanGenerator`：组装 prompt、调用 LLM 并标准化最终结果。
 - `PlannerAgent`：整合景点、天气、酒店和用户偏好，生成最终行程。
 
 ### 推荐调用流程
@@ -269,10 +294,12 @@ flowchart LR
 ```text
 用户请求
 -> FastAPI 接收参数
--> AttractionSearchAgent 查询景点
--> WeatherQueryAgent 查询天气
+-> RequirementAgent 解析约束
+-> AttractionAgent 查询景点
+-> WeatherAgent 查询天气
 -> HotelAgent 推荐酒店
--> PlannerAgent 整合生成行程
+-> TripPlanGenerator 生成行程
+-> PlannerAgent 整合和降级
 -> 返回 TripPlan 给前端
 ```
 
@@ -281,7 +308,8 @@ flowchart LR
 - 每个 Agent 只负责一个清晰任务。
 - 每个 Agent 都返回结构化结果。
 - 后端服务层负责统一调度，不让多个 Agent 随意互相调用。
-- PlannerAgent 只做整合，不重复查询景点、天气和酒店。
+- PlannerAgent 只做编排和降级，不重复查询景点、天气和酒店。
+- TripPlanGenerator 只做生成，不负责调度其他 Agent。
 - 多智能体阶段继续沿用已经稳定的 `TripPlan` 数据结构。
 
 ### 验收标准
@@ -289,6 +317,7 @@ flowchart LR
 - 每个 Agent 可以独立测试。
 - 任一非核心 Agent 失败时，系统可以降级处理。
 - PlannerAgent 可以基于其他 Agent 的结果生成完整行程。
+- TripPlanGenerator 可以独立测试 prompt 组装与结果标准化。
 - 多智能体流程最终返回的数据格式与前端展示格式保持一致。
 
 ### 阶段产出

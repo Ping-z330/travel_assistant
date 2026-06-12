@@ -65,6 +65,12 @@ export interface RequirementSummary {
   avoid: string[]
   route_preferences: string[]
   attractions_per_day: number
+  mobility_level: string
+  route_intensity: string
+  meal_focus: string
+  hotel_area_preference: string
+  must_have: string[]
+  must_avoid: string[]
 }
 
 export interface TripPlan {

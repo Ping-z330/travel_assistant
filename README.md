@@ -12,6 +12,7 @@
 - 支持 PDF 导出
 - 已完成第一版多智能体协作架构
 - 已加入日志、重试、并行和缓存优化
+- 已完成 Agent 编排、生成和需求解析的结构化拆分
 - 已加入后端 `pytest` 与前端 `Vitest` 回归测试
 - 支持导出前后端共享 JSON Schema 数据契约
 
@@ -28,17 +29,19 @@
    -> AttractionAgent
    -> WeatherAgent
    -> HotelAgent
--> PromptBuilder 组装 Prompt
--> DeepSeek 生成结构化 TripPlan
--> parse_llm_trip_plan
--> normalize_trip_plan
+   -> TripPlanGenerator
+      -> PlanningContext
+      -> PromptBuilder 组装 Prompt
+      -> DeepSeek 生成结构化 TripPlan
+      -> parse_llm_trip_plan
+      -> normalize_trip_plan
 -> 返回前端
 ```
 
 ### 多智能体职责拆分
 
 - `PlannerAgent`
-  负责统一调度子 Agent、调用 LLM、汇总结果。
+  负责统一调度子 Agent、处理失败降级、调用计划生成模块。
 - `AttractionAgent`
   负责景点候选搜索与景点上下文整理。
 - `WeatherAgent`
@@ -47,8 +50,12 @@
   负责酒店候选搜索与酒店上下文整理。
 - `RequirementAgent`
   负责把用户偏好与补充需求解析为稳定的结构化旅行约束。
+- `TripPlanGenerator`
+  负责把上下文交给 LLM，并将输出标准化为最终 `TripPlan`。
 - `PromptBuilder`
-  负责把用户需求、景点、天气、酒店上下文组装成最终 Prompt。
+  负责把 `PlanningContext` 组装成最终 Prompt。
+
+详细说明见 [docs/agent-architecture.md](docs/agent-architecture.md)。
 
 ## 功能概览
 
@@ -122,6 +129,8 @@ travel-assistant/
 │  ├─ src/services/
 │  ├─ src/types/
 │  └─ src/views/
+├─ docs/
+│  └─ agent-architecture.md
 ├─ shared/
 │  └─ schema/
 │     └─ trip.schema.json
@@ -272,6 +281,7 @@ cd e:\Ai_Project\travel-assistant\backend
 - 日志
   - 各 Agent 具备开始、成功、失败、耗时日志
 - 兜底
+  - 子 Agent 失败时支持降级
   - LLM 返回异常时支持结构修补和 fallback
 
 ## 结果页说明
@@ -290,7 +300,7 @@ cd e:\Ai_Project\travel-assistant\backend
 
 ## 多智能体工作方式
 
-可以把当前系统理解成“一个总控规划师 + 三个专业助手”：
+可以把当前系统理解成“一个编排器 + 三个专业助手 + 一个计划生成器”：
 
 - `AttractionAgent`
   提供景点候选
@@ -298,8 +308,10 @@ cd e:\Ai_Project\travel-assistant\backend
   提供天气摘要
 - `HotelAgent`
   提供酒店候选
+- `TripPlanGenerator`
+  组装上下文、调用大模型并标准化最终结果
 - `PlannerAgent`
-  汇总三者并调用大模型生成最终 `TripPlan`
+  汇总三者并处理失败降级
 
 这属于第一版协作式多智能体架构，特点是：
 
@@ -316,12 +328,14 @@ cd e:\Ai_Project\travel-assistant\backend
   - `TripPlan` 解析、标准化、兜底补齐
   - 高德 Adapter 错误语义
   - POI / 酒店 / 天气数据整理
+  - PlannerAgent 编排和 fallback
+  - PromptBuilder 与 RequirementAgent 结构化约束解析
   - TTL 缓存过期与容量控制
 - 前端 `Vitest`
   - 地图路线数据投影
   - 连续住宿点位合并
   - 无坐标住宿点跳过
-- 南昌
+- 前端 `Vitest` 运行正常
 
 验证内容包括：
 

@@ -1,33 +1,25 @@
-from app.agents.requirement_schemas import RequirementAgentResult
-from app.models.trip import TripPlanRequest
+from app.agents.schemas import PlanningContext
 from app.services.hotel_service import (
-    HotelCandidate,
     format_hotel_candidates_for_prompt,
 )
 from app.services.poi_service import (
-    PoiCandidate,
     format_poi_candidates_for_prompt,
 )
 from app.services.weather_service import (
-    WeatherSnapshot,
     format_weather_for_prompt,
 )
 
 
-def build_trip_prompt(
-    request: TripPlanRequest,
-    requirement_result: RequirementAgentResult,
-    poi_candidates: list[PoiCandidate],
-    weather_snapshot: WeatherSnapshot | None,
-    hotel_candidates: list[HotelCandidate],
-) -> str:
-    poi_context = format_poi_candidates_for_prompt(poi_candidates)
+def build_trip_prompt(context: PlanningContext) -> str:
+    request = context.request
+    requirement_result = context.requirement_result
+    poi_context = format_poi_candidates_for_prompt(context.poi_candidates)
     weather_context = (
-        format_weather_for_prompt(weather_snapshot)
-        if weather_snapshot
+        format_weather_for_prompt(context.weather_snapshot)
+        if context.weather_snapshot
         else "暂无实时天气参考，可根据常识生成天气建议。"
     )
-    hotel_context = format_hotel_candidates_for_prompt(hotel_candidates)
+    hotel_context = format_hotel_candidates_for_prompt(context.hotel_candidates)
     requirements = request.requirements.strip() if request.requirements else "无"
 
     return f"""

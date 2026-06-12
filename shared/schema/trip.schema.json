@@ -308,6 +308,42 @@
               "default": 2,
               "title": "Attractions Per Day",
               "type": "integer"
+            },
+            "mobility_level": {
+              "default": "普通",
+              "title": "Mobility Level",
+              "type": "string"
+            },
+            "route_intensity": {
+              "default": "均衡",
+              "title": "Route Intensity",
+              "type": "string"
+            },
+            "meal_focus": {
+              "default": "常规餐饮",
+              "title": "Meal Focus",
+              "type": "string"
+            },
+            "hotel_area_preference": {
+              "default": "交通便利区域",
+              "title": "Hotel Area Preference",
+              "type": "string"
+            },
+            "must_have": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Must Have",
+              "type": "array"
+            },
+            "must_avoid": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Must Avoid",
+              "type": "array"
             }
           },
           "title": "RequirementSummary",

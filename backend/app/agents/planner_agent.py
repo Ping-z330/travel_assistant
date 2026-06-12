@@ -3,15 +3,16 @@ from time import perf_counter
 
 from app.agents.attraction_agent import AttractionAgent
 from app.agents.hotel_agent import HotelAgent
-from app.agents.prompt_builder import build_trip_prompt
 from app.agents.requirement_agent import RequirementAgent
+from app.agents.schemas import (
+    AgentRunResult,
+    AttractionAgentResult,
+    HotelAgentResult,
+    WeatherAgentResult,
+)
+from app.agents.trip_plan_generator import TripPlanGenerator
 from app.agents.weather_agent import WeatherAgent
 from app.models.trip import TripPlan, TripPlanRequest
-from app.services.llm_client import call_deepseek
-from app.services.trip_plan_postprocessor import (
-    normalize_trip_plan,
-    parse_llm_trip_plan,
-)
 from app.services.mock_trip_service import build_mock_trip_plan
 
 
@@ -23,6 +24,7 @@ class PlannerAgent:
         self.attraction_agent = AttractionAgent()
         self.weather_agent = WeatherAgent()
         self.hotel_agent = HotelAgent()
+        self.trip_plan_generator = TripPlanGenerator()
 
     def run(self, request: TripPlanRequest) -> TripPlan:
         total_start = perf_counter()
@@ -54,36 +56,37 @@ class PlannerAgent:
                 requirement_result,
             )
 
-            attraction_result = attraction_future.result()
-            weather_result = weather_future.result()
-            hotel_result = hotel_future.result()
+            attraction_run = attraction_future.result()
+            weather_run = weather_future.result()
+            hotel_run = hotel_future.result()
+
+        attraction_result = self._agent_data(attraction_run, AttractionAgentResult)
+        weather_result = self._agent_data(weather_run, WeatherAgentResult)
+        hotel_result = self._agent_data(hotel_run, HotelAgentResult)
 
         poi_candidates = attraction_result.candidates if attraction_result else []
         weather_snapshot = weather_result.snapshot if weather_result else None
         hotel_candidates = hotel_result.candidates if hotel_result else []
 
-        prompt = build_trip_prompt(
-            request=request,
-            requirement_result=requirement_result,
-            poi_candidates=poi_candidates,
-            weather_snapshot=weather_snapshot,
-            hotel_candidates=hotel_candidates,
-        )
-
         try:
-            llm_start = perf_counter()
-            content = call_deepseek(prompt)
-            trip_plan = parse_llm_trip_plan(content)
-            result = normalize_trip_plan(trip_plan, request, hotel_candidates)
+            generation_start = perf_counter()
+            result = self.trip_plan_generator.run(
+                request=request,
+                requirement_result=requirement_result,
+                poi_candidates=poi_candidates,
+                weather_snapshot=weather_snapshot,
+                hotel_candidates=hotel_candidates,
+            )
             result.requirement_summary = self.requirement_agent.to_summary(requirement_result)
-            llm_elapsed_ms = round((perf_counter() - llm_start) * 1000, 1)
+            generation_elapsed_ms = round((perf_counter() - generation_start) * 1000, 1)
             total_elapsed_ms = round((perf_counter() - total_start) * 1000, 1)
 
             print(
                 f"[PLANNER_AGENT] success city={request.city} "
                 f"poi_count={len(poi_candidates)} hotel_count={len(hotel_candidates)} "
                 f"weather={'yes' if weather_snapshot else 'no'} "
-                f"llm_elapsed_ms={llm_elapsed_ms} total_elapsed_ms={total_elapsed_ms}"
+                f"generation_elapsed_ms={generation_elapsed_ms} "
+                f"total_elapsed_ms={total_elapsed_ms}"
             )
 
             return result
@@ -95,9 +98,45 @@ class PlannerAgent:
             return result
 
     @staticmethod
-    def _run_agent_safely(agent_name: str, agent_runner, request: TripPlanRequest, *args):
+    def _run_agent_safely(
+        agent_name: str,
+        agent_runner,
+        request: TripPlanRequest,
+        *args,
+    ) -> AgentRunResult:
+        start = perf_counter()
         try:
-            return agent_runner(request, *args)
+            data = agent_runner(request, *args)
+            return AgentRunResult(
+                source=agent_name,
+                ok=True,
+                data=data,
+                error=None,
+                elapsed_ms=round((perf_counter() - start) * 1000, 1),
+            )
         except Exception as exc:
             print(f"[{agent_name}_WARN] {exc}")
+            return AgentRunResult(
+                source=agent_name,
+                ok=False,
+                data=None,
+                error=str(exc),
+                elapsed_ms=round((perf_counter() - start) * 1000, 1),
+            )
+
+    @staticmethod
+    def _agent_data(
+        result: AgentRunResult,
+        expected_type: type,
+    ):
+        if not result.ok:
             return None
+
+        if isinstance(result.data, expected_type):
+            return result.data
+
+        print(
+            f"[{result.source}_WARN] unexpected result type="
+            f"{type(result.data).__name__}"
+        )
+        return None
