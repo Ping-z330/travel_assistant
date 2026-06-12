@@ -2,7 +2,7 @@
 import axios from 'axios'
 import type { TripPlan, TripPlanRequest } from '../types/trip'
 
-const API_BASE_URL = 'http://localhost:8003'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8003'
 
 export const generateTripPlan = async (
   request: TripPlanRequest,

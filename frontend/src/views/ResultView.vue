@@ -5,7 +5,16 @@ import type { TripPlan } from '../types/trip'
 
 const tripPlan = computed<TripPlan | null>(() => {
   const data = sessionStorage.getItem('tripPlan')
-  return data ? JSON.parse(data) : null
+  if (!data) {
+    return null
+  }
+
+  try {
+    return JSON.parse(data) as TripPlan
+  } catch {
+    sessionStorage.removeItem('tripPlan')
+    return null
+  }
 })
 </script>
 

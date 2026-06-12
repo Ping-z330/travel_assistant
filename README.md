@@ -12,6 +12,8 @@
 - 支持 PDF 导出
 - 已完成第一版多智能体协作架构
 - 已加入日志、重试、并行和缓存优化
+- 已加入后端 `pytest` 与前端 `Vitest` 回归测试
+- 支持导出前后端共享 JSON Schema 数据契约
 
 ## 当前架构
 
@@ -22,6 +24,7 @@
 -> POST /api/trip/plan
 -> trip_plan_service.generate_trip_plan
 -> PlannerAgent.run
+   -> RequirementAgent
    -> AttractionAgent
    -> WeatherAgent
    -> HotelAgent
@@ -42,6 +45,8 @@
   负责天气查询与天气上下文整理。
 - `HotelAgent`
   负责酒店候选搜索与酒店上下文整理。
+- `RequirementAgent`
+  负责把用户偏好与补充需求解析为稳定的结构化旅行约束。
 - `PromptBuilder`
   负责把用户需求、景点、天气、酒店上下文组装成最终 Prompt。
 
@@ -86,6 +91,8 @@ travel-assistant/
 │  │  │  ├─ attraction_agent.py
 │  │  │  ├─ weather_agent.py
 │  │  │  ├─ hotel_agent.py
+│  │  │  ├─ requirement_agent.py
+│  │  │  ├─ requirement_schemas.py
 │  │  │  ├─ planner_agent.py
 │  │  │  ├─ prompt_builder.py
 │  │  │  └─ schemas.py
@@ -100,17 +107,24 @@ travel-assistant/
 │  │     ├─ weather_service.py
 │  │     ├─ hotel_service.py
 │  │     ├─ image_service.py
-│  │     ├─ llm_trip_service.py
+│  │     ├─ amap_utils.py
+│  │     ├─ trip_plan_postprocessor.py
 │  │     ├─ llm_client.py
 │  │     ├─ trip_plan_service.py
 │  │     ├─ mock_trip_service.py
 │  │     └─ cache_utils.py
+│  ├─ scripts/
+│  │  └─ export_trip_schema.py
+│  ├─ tests/
 │  └─ main.py
 ├─ frontend/
 │  ├─ src/components/
 │  ├─ src/services/
 │  ├─ src/types/
 │  └─ src/views/
+├─ shared/
+│  └─ schema/
+│     └─ trip.schema.json
 ├─ README.md
 └─ ROADMAP.md
 ```
@@ -127,6 +141,7 @@ travel-assistant/
 - `@amap/amap-jsapi-loader`
 - `html2canvas`
 - `jspdf`
+- Vitest
 
 ### 后端
 
@@ -135,6 +150,7 @@ travel-assistant/
 - httpx
 - python-dotenv
 - OpenAI SDK 兼容方式调用 DeepSeek
+- pytest
 
 ### 外部服务
 
@@ -158,6 +174,7 @@ PEXELS_API_KEY=your_pexels_api_key
 ### 前端 `frontend/.env.local`
 
 ```env
+VITE_API_BASE_URL=http://localhost:8003
 VITE_AMAP_JSAPI_KEY=your_amap_jsapi_key
 ```
 
@@ -189,6 +206,36 @@ npm.cmd run dev
 
 - `http://localhost:5173`
 
+### 3. 运行验证
+
+#### 后端测试
+
+```powershell
+cd e:\Ai_Project\travel-assistant\backend
+.\.venv\Scripts\python.exe -m pytest
+```
+
+#### 前端测试与构建
+
+```powershell
+cd e:\Ai_Project\travel-assistant\frontend
+npm.cmd run test
+npm.cmd run build
+```
+
+### 4. 重新生成前后端数据契约
+
+当 `backend/app/models/trip.py` 中的 `TripPlanRequest` 或 `TripPlan` 结构发生变化时，运行：
+
+```powershell
+cd e:\Ai_Project\travel-assistant\backend
+.\.venv\Scripts\python.exe scripts\export_trip_schema.py
+```
+
+生成结果位于：
+
+- `shared/schema/trip.schema.json`
+
 ## API 说明
 
 ### 正式接口
@@ -216,8 +263,12 @@ npm.cmd run dev
 - 并行
   - `PlannerAgent` 会并行调用景点、天气、酒店三个子 Agent
 - 缓存
-  - 景点、天气、酒店支持短时 TTL 缓存
+  - 景点、天气、酒店支持带容量上限的短时 TTL 缓存
   - 城市地理编码支持 `lru_cache`
+- 外部数据错误语义
+  - 高德配置错误、请求失败、响应异常使用独立异常类型区分
+- 数据契约
+  - 后端 Pydantic 模型可导出为 `shared/schema/trip.schema.json`
 - 日志
   - 各 Agent 具备开始、成功、失败、耗时日志
 - 兜底
@@ -257,13 +308,19 @@ npm.cmd run dev
 - 容易扩展
 - 比单智能体版本更利于维护和优化
 
-## 回归测试
+## 自动化测试覆盖
 
-当前版本已完成以下城市的真实链路回归：
+当前版本包含以下自动化测试：
 
-- 北京
-- 杭州
-- 成都
+- 后端 `pytest`
+  - `TripPlan` 解析、标准化、兜底补齐
+  - 高德 Adapter 错误语义
+  - POI / 酒店 / 天气数据整理
+  - TTL 缓存过期与容量控制
+- 前端 `Vitest`
+  - 地图路线数据投影
+  - 连续住宿点位合并
+  - 无坐标住宿点跳过
 - 南昌
 
 验证内容包括：

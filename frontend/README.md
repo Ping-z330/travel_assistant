@@ -7,6 +7,7 @@
 ```powershell
 npm.cmd install
 npm.cmd run dev
+npm.cmd run test
 npm.cmd run build
 ```
 
@@ -19,5 +20,6 @@ frontend/.env.local
 示例：
 
 ```env
+VITE_API_BASE_URL=http://localhost:8003
 VITE_AMAP_JSAPI_KEY=your_amap_jsapi_key
 ```

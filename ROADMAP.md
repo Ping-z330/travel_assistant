@@ -118,8 +118,9 @@ Budget
 
 ```mermaid
 flowchart TD
-    A[收到 TripPlanRequest] --> B[build_llm_trip_plan]
-    B --> C[build_trip_prompt]
+    A[收到 TripPlanRequest] --> B[PlannerAgent.run]
+    B --> B1[并行调用 AttractionAgent / WeatherAgent / HotelAgent]
+    B1 --> C[build_trip_prompt]
     C --> D[生成 Prompt 字符串]
 
     D --> E[call_deepseek]

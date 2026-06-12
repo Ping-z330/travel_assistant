@@ -1,10 +1,11 @@
 import re
 from dataclasses import dataclass
-from typing import Any
 
+from app.agents.requirement_schemas import RequirementAgentResult
 from app.models.trip import TripPlanRequest
-from app.services.cache_utils import TTLCache
 from app.services.amap_client import search_text_pois
+from app.services.amap_utils import parse_amap_location
+from app.services.cache_utils import TTLCache
 
 
 NOISE_NAME_KEYWORDS = {
@@ -55,7 +56,7 @@ class PoiCandidate:
 def search_trip_poi_candidates(
     request: TripPlanRequest,
     *,
-    requirement_result: Any | None = None,
+    requirement_result: RequirementAgentResult | None = None,
     per_keyword_limit: int = 5,
     total_limit: int = 8,
 ) -> list[PoiCandidate]:
@@ -128,7 +129,10 @@ def format_poi_candidates_for_prompt(candidates: list[PoiCandidate]) -> str:
     return "\n".join(lines)
 
 
-def build_search_keywords(preference: str, requirement_result: Any | None = None) -> list[str]:
+def build_search_keywords(
+    preference: str,
+    requirement_result: RequirementAgentResult | None = None,
+) -> list[str]:
     parts = [
         item.strip()
         for item in re.split(r"[，,、/；;|]+", preference)
@@ -160,17 +164,18 @@ def build_search_keywords(preference: str, requirement_result: Any | None = None
     return deduped_keywords
 
 
-def _build_requirement_keywords(requirement_result: Any | None) -> list[str]:
+def _build_requirement_keywords(
+    requirement_result: RequirementAgentResult | None,
+) -> list[str]:
     if requirement_result is None:
         return []
 
     keywords: list[str] = []
-    companions = set(getattr(requirement_result, "companions", []))
-    route_preferences = set(getattr(requirement_result, "route_preferences", []))
-    food_preferences = set(getattr(requirement_result, "food_preferences", []))
-    pace = getattr(requirement_result, "pace", "正常")
+    companions = set(requirement_result.companions)
+    route_preferences = set(requirement_result.route_preferences)
+    food_preferences = set(requirement_result.food_preferences)
 
-    if {"老人同行", "父母同行", "长辈同行"} & companions or pace == "慢节奏":
+    if {"老人同行", "父母同行", "长辈同行"} & companions or requirement_result.pace == "慢节奏":
         keywords.extend(["公园", "博物馆", "城市休闲景点"])
 
     if "亲子出行" in companions:
@@ -191,25 +196,27 @@ def _build_requirement_keywords(requirement_result: Any | None) -> list[str]:
     return keywords
 
 
-def _should_avoid_hot_keywords(requirement_result: Any | None) -> bool:
+def _should_avoid_hot_keywords(
+    requirement_result: RequirementAgentResult | None,
+) -> bool:
     if requirement_result is None:
         return False
 
-    avoid = set(getattr(requirement_result, "avoid", []))
+    avoid = set(requirement_result.avoid)
     return bool({"拥挤景点", "网红打卡点", "长时间排队"} & avoid)
 
 
-def _requirement_cache_fragment(requirement_result: Any | None) -> str:
+def _requirement_cache_fragment(requirement_result: RequirementAgentResult | None) -> str:
     if requirement_result is None:
         return "no_requirements"
 
     return "|".join(
         [
-            getattr(requirement_result, "pace", "正常"),
-            ",".join(getattr(requirement_result, "companions", [])),
-            ",".join(getattr(requirement_result, "food_preferences", [])),
-            ",".join(getattr(requirement_result, "avoid", [])),
-            ",".join(getattr(requirement_result, "route_preferences", [])),
+            requirement_result.pace,
+            ",".join(requirement_result.companions),
+            ",".join(requirement_result.food_preferences),
+            ",".join(requirement_result.avoid),
+            ",".join(requirement_result.route_preferences),
         ]
     )
 
@@ -235,18 +242,11 @@ def _is_valid_category(category: str) -> bool:
 
 def _convert_poi(raw_poi: dict) -> PoiCandidate | None:
     name = str(raw_poi.get("name", "")).strip()
-    location = str(raw_poi.get("location", "")).strip()
-    if not name or not location or "," not in location:
+    coordinates = parse_amap_location(raw_poi.get("location"))
+    if not name or coordinates is None:
         return None
 
-    longitude_text, latitude_text = location.split(",", 1)
-
-    try:
-        longitude = float(longitude_text)
-        latitude = float(latitude_text)
-    except ValueError:
-        return None
-
+    longitude, latitude = coordinates
     address = str(raw_poi.get("address", "")).strip() or "地址待补充"
     category = str(raw_poi.get("type", "")).strip() or "景点"
 

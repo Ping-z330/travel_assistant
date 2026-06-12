@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from app.services.amap_client import geocode_city, get_weather_info
+from app.services.amap_client import AmapResponseError, geocode_city, get_weather_info
 from app.services.cache_utils import TTLCache
 
 
@@ -29,12 +29,12 @@ def get_trip_weather_snapshot(city: str, *, max_days: int = 3) -> WeatherSnapsho
 
     forecasts = raw.get("forecasts", [])
     if not forecasts:
-        raise RuntimeError("AMap weather response does not contain forecasts")
+        raise AmapResponseError("AMap weather response does not contain forecasts")
 
     first_forecast = forecasts[0]
     casts = first_forecast.get("casts", [])
     if not casts:
-        raise RuntimeError("AMap weather response does not contain cast details")
+        raise AmapResponseError("AMap weather response does not contain cast details")
 
     selected_casts = casts[:max_days]
     summary_lines: list[str] = []

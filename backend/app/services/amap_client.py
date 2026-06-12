@@ -11,6 +11,22 @@ AMAP_WEATHER_URL = "https://restapi.amap.com/v3/weather/weatherInfo"
 AMAP_GEOCODE_URL = "https://restapi.amap.com/v3/geocode/geo"
 
 
+class AmapError(RuntimeError):
+    """Base error for AMap adapter failures."""
+
+
+class AmapConfigurationError(AmapError):
+    """Raised when required AMap configuration is missing."""
+
+
+class AmapRequestError(AmapError):
+    """Raised when AMap cannot be reached after retries."""
+
+
+class AmapResponseError(AmapError):
+    """Raised when AMap returns an invalid or unsuccessful response."""
+
+
 def search_text_pois(
     keywords: str,
     city: str,
@@ -109,7 +125,7 @@ def geocode_city(city: str) -> dict:
 
     geocodes = data.get("geocodes", [])
     if not isinstance(geocodes, list) or not geocodes:
-        raise RuntimeError(f"AMap geocode returned no results for city: {city}")
+        raise AmapResponseError(f"AMap geocode returned no results for city: {city}")
 
     first = geocodes[0]
     location = str(first.get("location", "")).strip()
@@ -117,9 +133,9 @@ def geocode_city(city: str) -> dict:
     name = str(first.get("formatted_address", "")).strip() or normalized_city
 
     if not location:
-        raise RuntimeError(f"AMap geocode did not provide location for city: {city}")
+        raise AmapResponseError(f"AMap geocode did not provide location for city: {city}")
     if not adcode:
-        raise RuntimeError(f"AMap geocode did not provide adcode for city: {city}")
+        raise AmapResponseError(f"AMap geocode did not provide adcode for city: {city}")
 
     return {
         "name": name,
@@ -131,7 +147,7 @@ def geocode_city(city: str) -> dict:
 def _get_api_key() -> str:
     api_key = os.getenv("AMAP_WEB_API_KEY")
     if not api_key:
-        raise RuntimeError("AMAP_WEB_API_KEY is not configured")
+        raise AmapConfigurationError("AMAP_WEB_API_KEY is not configured")
     return api_key
 
 
@@ -159,7 +175,7 @@ def _request_json(
 
             sleep(0.8 * attempt)
 
-    raise RuntimeError(f"AMap request failed after retries: {last_error}")
+    raise AmapRequestError(f"AMap request failed after retries: {last_error}")
 
 
 def _raise_for_amap_error(data: dict, prefix: str) -> None:
@@ -167,4 +183,4 @@ def _raise_for_amap_error(data: dict, prefix: str) -> None:
         return
 
     info = data.get("info", "Unknown AMap error")
-    raise RuntimeError(f"{prefix}: {info}")
+    raise AmapResponseError(f"{prefix}: {info}")

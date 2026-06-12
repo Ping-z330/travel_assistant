@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import Any
 
+from app.agents.requirement_schemas import RequirementAgentResult
 from app.models.trip import TripPlanRequest
 from app.services.amap_client import geocode_city, search_around_pois
+from app.services.amap_utils import parse_amap_location
 from app.services.cache_utils import TTLCache
 
 
@@ -30,7 +31,7 @@ HOTEL_CACHE = TTLCache(ttl_seconds=1800)
 def search_trip_hotel_candidates(
     request: TripPlanRequest,
     *,
-    requirement_result: Any | None = None,
+    requirement_result: RequirementAgentResult | None = None,
 ) -> list[HotelCandidate]:
     """根据预算生成关键词，并在目标城市中心点周边搜索酒店候选。"""
     cache_key = (
@@ -78,7 +79,7 @@ def search_trip_hotel_candidates(
 # build_hotel_keywords 函数根据用户的预算生成不同档位的酒店搜索关键词，帮助提高搜索结果的相关性和质量。
 def build_hotel_keywords(
     request: TripPlanRequest,
-    requirement_result: Any | None = None,
+    requirement_result: RequirementAgentResult | None = None,
 ) -> list[str]:
     """按人均日预算生成不同档位的酒店搜索关键词。"""
     requirement_keywords = _build_requirement_hotel_keywords(requirement_result)
@@ -135,20 +136,15 @@ def _convert_hotel_poi(
     name = (poi.get("name") or "").strip()
     address = (poi.get("address") or "").strip()
     category = (poi.get("type") or "").strip()
-    location = (poi.get("location") or "").strip()
+    coordinates = parse_amap_location(poi.get("location"))
 
-    if not name or not location:
+    if not name or coordinates is None:
         return None
 
     if not any(keyword in name or keyword in category for keyword in HOTEL_CATEGORY_KEYWORDS):
         return None
 
-    try:
-        longitude_str, latitude_str = location.split(",")
-        longitude = float(longitude_str)
-        latitude = float(latitude_str)
-    except (TypeError, ValueError):
-        return None
+    longitude, latitude = coordinates
 
     return HotelCandidate(
         name=name,
@@ -172,12 +168,14 @@ def _build_price_hint(request: TripPlanRequest) -> str:
     return "预算充足，可优先考虑高档或豪华酒店"
 
 
-def _build_requirement_hotel_keywords(requirement_result: Any | None) -> list[str]:
+def _build_requirement_hotel_keywords(
+    requirement_result: RequirementAgentResult | None,
+) -> list[str]:
     if requirement_result is None:
         return []
 
-    preferences = set(getattr(requirement_result, "hotel_preferences", []))
-    companions = set(getattr(requirement_result, "companions", []))
+    preferences = set(requirement_result.hotel_preferences)
+    companions = set(requirement_result.companions)
 
     keywords: list[str] = []
     if {"交通便利", "靠近地铁"} & preferences:
@@ -196,11 +194,13 @@ def _build_requirement_hotel_keywords(requirement_result: Any | None) -> list[st
     return keywords
 
 
-def _has_budget_friendly_requirement(requirement_result: Any | None) -> bool:
+def _has_budget_friendly_requirement(
+    requirement_result: RequirementAgentResult | None,
+) -> bool:
     if requirement_result is None:
         return False
 
-    preferences = set(getattr(requirement_result, "hotel_preferences", []))
+    preferences = set(requirement_result.hotel_preferences)
     return "预算友好" in preferences
 
 
@@ -215,15 +215,15 @@ def _dedupe_keywords(keywords: list[str]) -> list[str]:
     return deduped
 
 
-def _requirement_cache_fragment(requirement_result: Any | None) -> str:
+def _requirement_cache_fragment(requirement_result: RequirementAgentResult | None) -> str:
     if requirement_result is None:
         return "no_requirements"
 
     return "|".join(
         [
-            getattr(requirement_result, "pace", "正常"),
-            ",".join(getattr(requirement_result, "companions", [])),
-            ",".join(getattr(requirement_result, "hotel_preferences", [])),
-            ",".join(getattr(requirement_result, "avoid", [])),
+            requirement_result.pace,
+            ",".join(requirement_result.companions),
+            ",".join(requirement_result.hotel_preferences),
+            ",".join(requirement_result.avoid),
         ]
     )

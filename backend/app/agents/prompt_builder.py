@@ -1,4 +1,4 @@
-from app.agents.schemas import RequirementAgentResult
+from app.agents.requirement_schemas import RequirementAgentResult
 from app.models.trip import TripPlanRequest
 from app.services.hotel_service import (
     HotelCandidate,

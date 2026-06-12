@@ -1,72 +1,11 @@
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.agents.prompt_builder import build_trip_prompt
-from app.agents.requirement_agent import RequirementAgent
 from app.models.trip import TripPlan, TripPlanRequest
-from app.services.hotel_service import (
-    HotelCandidate,
-    search_trip_hotel_candidates,
-)
+from app.services.hotel_service import HotelCandidate
 from app.services.image_service import search_attraction_image
-from app.services.llm_client import call_deepseek
-from app.services.mock_trip_service import build_mock_trip_plan
-from app.services.poi_service import (
-    PoiCandidate,
-    search_trip_poi_candidates,
-)
-from app.services.weather_service import (
-    WeatherSnapshot,
-    get_trip_weather_snapshot,
-)
 
 
-def build_llm_trip_plan(request: TripPlanRequest) -> TripPlan:
-    poi_candidates: list[PoiCandidate] = []
-    weather_snapshot: WeatherSnapshot | None = None
-    hotel_candidates: list[HotelCandidate] = []
-    requirement_result = RequirementAgent().run(request)
-
-    try:
-        poi_candidates = search_trip_poi_candidates(
-            request,
-            requirement_result=requirement_result,
-        )
-    except Exception as exc:
-        print(f"[AMAP_POI_WARN] Failed to search POIs: {exc}")
-
-    try:
-        weather_snapshot = get_trip_weather_snapshot(request.city)
-    except Exception as exc:
-        print(f"[AMAP_WEATHER_WARN] Failed to query weather: {exc}")
-
-    try:
-        hotel_candidates = search_trip_hotel_candidates(
-            request,
-            requirement_result=requirement_result,
-        )
-    except Exception as exc:
-        print(f"[AMAP_HOTEL_WARN] Failed to search hotels: {exc}")
-
-    prompt = build_trip_prompt(
-        request=request,
-        requirement_result=requirement_result,
-        poi_candidates=poi_candidates,
-        weather_snapshot=weather_snapshot,
-        hotel_candidates=hotel_candidates,
-    )
-
-    try:
-        content = call_deepseek(prompt)
-        trip_plan = parse_llm_trip_plan(content)
-        result = normalize_trip_plan(trip_plan, request, hotel_candidates)
-        result.requirement_summary = RequirementAgent.to_summary(requirement_result)
-        return result
-    except Exception as exc:
-        print(f"[LLM_FALLBACK] DeepSeek generation failed: {exc}")
-        result = build_mock_trip_plan(request)
-        result.requirement_summary = RequirementAgent.to_summary(requirement_result)
-        return result
 def parse_llm_trip_plan(content: str) -> TripPlan:
     data = json.loads(content)
     _fill_missing_hotels(data)
@@ -96,6 +35,8 @@ def normalize_trip_plan(
     trip_plan: TripPlan,
     request: TripPlanRequest,
     hotel_candidates: list[HotelCandidate],
+    *,
+    enrich_images: bool = True,
 ) -> TripPlan:
     trip_plan.city = request.city
     trip_plan.start_date = request.start_date
@@ -131,7 +72,8 @@ def normalize_trip_plan(
 
         _ensure_daily_meals(day.meals, request.city)
 
-    _enrich_missing_attraction_images(trip_plan, request.city)
+    if enrich_images:
+        _enrich_missing_attraction_images(trip_plan, request.city)
 
     trip_plan.budget.total = (
         trip_plan.budget.total_attractions

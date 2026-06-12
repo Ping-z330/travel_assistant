@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Travel Assistant Trip Contract",
+  "models": {
+    "TripPlanRequest": {
+      "properties": {
+        "city": {
+          "description": "目的地城市",
+          "title": "City",
+          "type": "string"
+        },
+        "start_date": {
+          "description": "出发日期",
+          "title": "Start Date",
+          "type": "string"
+        },
+        "days": {
+          "description": "游玩天数",
+          "maximum": 15,
+          "minimum": 1,
+          "title": "Days",
+          "type": "integer"
+        },
+        "budget": {
+          "description": "总预算",
+          "minimum": 0,
+          "title": "Budget",
+          "type": "integer"
+        },
+        "people": {
+          "description": "出行人数",
+          "maximum": 20,
+          "minimum": 1,
+          "title": "People",
+          "type": "integer"
+        },
+        "preference": {
+          "description": "旅行偏好",
+          "title": "Preference",
+          "type": "string"
+        },
+        "requirements": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "补充需求",
+          "title": "Requirements"
+        }
+      },
+      "required": [
+        "city",
+        "start_date",
+        "days",
+        "budget",
+        "people",
+        "preference"
+      ],
+      "title": "TripPlanRequest",
+      "type": "object"
+    },
+    "TripPlan": {
+      "$defs": {
+        "Attraction": {
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "address": {
+              "title": "Address",
+              "type": "string"
+            },
+            "location": {
+              "$ref": "#/$defs/Location"
+            },
+            "visit_duration": {
+              "title": "Visit Duration",
+              "type": "integer"
+            },
+            "ticket_price": {
+              "title": "Ticket Price",
+              "type": "integer"
+            },
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "image_url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Image Url"
+            },
+            "category": {
+              "default": "景点",
+              "title": "Category",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "address",
+            "location",
+            "visit_duration",
+            "ticket_price",
+            "description"
+          ],
+          "title": "Attraction",
+          "type": "object"
+        },
+        "Budget": {
+          "properties": {
+            "total_attractions": {
+              "title": "Total Attractions",
+              "type": "integer"
+            },
+            "total_hotels": {
+              "title": "Total Hotels",
+              "type": "integer"
+            },
+            "total_meals": {
+              "title": "Total Meals",
+              "type": "integer"
+            },
+            "total_transportation": {
+              "title": "Total Transportation",
+              "type": "integer"
+            },
+            "total": {
+              "title": "Total",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total_attractions",
+            "total_hotels",
+            "total_meals",
+            "total_transportation",
+            "total"
+          ],
+          "title": "Budget",
+          "type": "object"
+        },
+        "DayPlan": {
+          "properties": {
+            "day": {
+              "title": "Day",
+              "type": "integer"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            },
+            "attractions": {
+              "items": {
+                "$ref": "#/$defs/Attraction"
+              },
+              "title": "Attractions",
+              "type": "array"
+            },
+            "meals": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Meals",
+              "type": "array"
+            },
+            "hotel": {
+              "$ref": "#/$defs/Hotel"
+            },
+            "weather": {
+              "$ref": "#/$defs/WeatherInfo"
+            }
+          },
+          "required": [
+            "day",
+            "title",
+            "attractions",
+            "meals",
+            "hotel",
+            "weather"
+          ],
+          "title": "DayPlan",
+          "type": "object"
+        },
+        "Hotel": {
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "address": {
+              "title": "Address",
+              "type": "string"
+            },
+            "price": {
+              "title": "Price",
+              "type": "integer"
+            },
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "location": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Location"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            }
+          },
+          "required": [
+            "name",
+            "address",
+            "price",
+            "description"
+          ],
+          "title": "Hotel",
+          "type": "object"
+        },
+        "Location": {
+          "properties": {
+            "longitude": {
+              "title": "Longitude",
+              "type": "number"
+            },
+            "latitude": {
+              "title": "Latitude",
+              "type": "number"
+            }
+          },
+          "required": [
+            "longitude",
+            "latitude"
+          ],
+          "title": "Location",
+          "type": "object"
+        },
+        "RequirementSummary": {
+          "properties": {
+            "raw_text": {
+              "default": "",
+              "title": "Raw Text",
+              "type": "string"
+            },
+            "pace": {
+              "default": "正常",
+              "title": "Pace",
+              "type": "string"
+            },
+            "companions": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Companions",
+              "type": "array"
+            },
+            "food_preferences": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Food Preferences",
+              "type": "array"
+            },
+            "hotel_preferences": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Hotel Preferences",
+              "type": "array"
+            },
+            "avoid": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Avoid",
+              "type": "array"
+            },
+            "route_preferences": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "title": "Route Preferences",
+              "type": "array"
+            },
+            "attractions_per_day": {
+              "default": 2,
+              "title": "Attractions Per Day",
+              "type": "integer"
+            }
+          },
+          "title": "RequirementSummary",
+          "type": "object"
+        },
+        "WeatherInfo": {
+          "properties": {
+            "date": {
+              "title": "Date",
+              "type": "string"
+            },
+            "weather": {
+              "title": "Weather",
+              "type": "string"
+            },
+            "temperature": {
+              "title": "Temperature",
+              "type": "string"
+            },
+            "suggestion": {
+              "title": "Suggestion",
+              "type": "string"
+            }
+          },
+          "required": [
+            "date",
+            "weather",
+            "temperature",
+            "suggestion"
+          ],
+          "title": "WeatherInfo",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "city": {
+          "title": "City",
+          "type": "string"
+        },
+        "start_date": {
+          "title": "Start Date",
+          "type": "string"
+        },
+        "days": {
+          "items": {
+            "$ref": "#/$defs/DayPlan"
+          },
+          "title": "Days",
+          "type": "array"
+        },
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "overall_suggestion": {
+          "title": "Overall Suggestion",
+          "type": "string"
+        },
+        "requirement_summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RequirementSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "city",
+        "start_date",
+        "days",
+        "budget",
+        "overall_suggestion"
+      ],
+      "title": "TripPlan",
+      "type": "object"
+    }
+  }
+}
