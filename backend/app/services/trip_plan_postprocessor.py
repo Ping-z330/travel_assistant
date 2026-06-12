@@ -1,7 +1,7 @@
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.models.trip import TripPlan, TripPlanRequest
+from app.models.trip import TransportSummary, TripPlan, TripPlanRequest
 from app.services.hotel_service import HotelCandidate
 from app.services.image_service import search_attraction_image
 
@@ -37,9 +37,12 @@ def normalize_trip_plan(
     hotel_candidates: list[HotelCandidate],
     *,
     enrich_images: bool = True,
+    transport_summary: TransportSummary | None = None,
 ) -> TripPlan:
     trip_plan.city = request.city
     trip_plan.start_date = request.start_date
+    if transport_summary is not None:
+        trip_plan.transport_summary = transport_summary
 
     if len(trip_plan.days) > request.days:
         trip_plan.days = trip_plan.days[: request.days]

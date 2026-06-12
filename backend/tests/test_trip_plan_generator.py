@@ -11,6 +11,7 @@ from app.models.trip import (
     TripPlanRequest,
     WeatherInfo,
 )
+from app.services.transport_service import build_transport_summary
 
 
 def test_trip_plan_generator_builds_prompt_and_normalizes_plan(monkeypatch) -> None:
@@ -18,6 +19,7 @@ def test_trip_plan_generator_builds_prompt_and_normalizes_plan(monkeypatch) -> N
     requirement_result = _requirement_result()
     raw_plan = _trip_plan("原始计划")
     normalized_plan = _trip_plan("规范化计划")
+    transport_summary = build_transport_summary(request)
     captured_prompt_context = {}
     captured_normalize_inputs = {}
 
@@ -29,10 +31,11 @@ def test_trip_plan_generator_builds_prompt_and_normalizes_plan(monkeypatch) -> N
         assert prompt == "prompt text"
         return '{"city": "杭州"}'
 
-    def fake_normalize_trip_plan(trip_plan, request, hotel_candidates):
+    def fake_normalize_trip_plan(trip_plan, request, hotel_candidates, **kwargs):
         captured_normalize_inputs["trip_plan"] = trip_plan
         captured_normalize_inputs["request"] = request
         captured_normalize_inputs["hotel_candidates"] = hotel_candidates
+        captured_normalize_inputs["transport_summary"] = kwargs["transport_summary"]
         return normalized_plan
 
     monkeypatch.setattr(
@@ -58,6 +61,7 @@ def test_trip_plan_generator_builds_prompt_and_normalizes_plan(monkeypatch) -> N
         poi_candidates=[],
         weather_snapshot=None,
         hotel_candidates=[],
+        transport_summary=transport_summary,
     )
 
     assert result is normalized_plan
@@ -68,10 +72,12 @@ def test_trip_plan_generator_builds_prompt_and_normalizes_plan(monkeypatch) -> N
     assert context.poi_candidates == []
     assert context.weather_snapshot is None
     assert context.hotel_candidates == []
+    assert context.transport_summary is transport_summary
     assert captured_normalize_inputs == {
         "trip_plan": raw_plan,
         "request": request,
         "hotel_candidates": [],
+        "transport_summary": transport_summary,
     }
 
 

@@ -4,6 +4,7 @@ from app.agents.requirement_schemas import RequirementAgentResult
 from app.models.trip import TripPlanRequest
 from app.services.hotel_service import HotelCandidate
 from app.services.poi_service import PoiCandidate
+from app.models.trip import TransportSummary
 from app.services.weather_service import WeatherSnapshot
 
 
@@ -23,6 +24,7 @@ class PlanningContext:
     poi_candidates: list[PoiCandidate]
     weather_snapshot: WeatherSnapshot | None
     hotel_candidates: list[HotelCandidate]
+    transport_summary: TransportSummary | None
 
 
 # 景点Agent输出

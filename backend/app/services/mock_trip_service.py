@@ -9,6 +9,7 @@ from app.models.trip import (
     WeatherInfo,
 )
 from app.agents.requirement_agent import RequirementAgent
+from app.services.transport_service import build_transport_summary
 
 
 def build_mock_trip_plan(request: TripPlanRequest) -> TripPlan:
@@ -35,6 +36,7 @@ def build_mock_trip_plan(request: TripPlanRequest) -> TripPlan:
             f"为你生成 {city} 的示例旅行计划。"
         ),
         requirement_summary=RequirementAgent.to_summary(requirement_result),
+        transport_summary=build_transport_summary(request),
     )
 
 

@@ -14,6 +14,7 @@ from app.agents.trip_plan_generator import TripPlanGenerator
 from app.agents.weather_agent import WeatherAgent
 from app.models.trip import TripPlan, TripPlanRequest
 from app.services.mock_trip_service import build_mock_trip_plan
+from app.services.transport_service import build_transport_summary
 
 
 class PlannerAgent:
@@ -67,6 +68,7 @@ class PlannerAgent:
         poi_candidates = attraction_result.candidates if attraction_result else []
         weather_snapshot = weather_result.snapshot if weather_result else None
         hotel_candidates = hotel_result.candidates if hotel_result else []
+        transport_summary = build_transport_summary(request)
 
         try:
             generation_start = perf_counter()
@@ -76,6 +78,7 @@ class PlannerAgent:
                 poi_candidates=poi_candidates,
                 weather_snapshot=weather_snapshot,
                 hotel_candidates=hotel_candidates,
+                transport_summary=transport_summary,
             )
             result.requirement_summary = self.requirement_agent.to_summary(requirement_result)
             generation_elapsed_ms = round((perf_counter() - generation_start) * 1000, 1)

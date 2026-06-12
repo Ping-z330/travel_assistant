@@ -1,4 +1,5 @@
 export interface TripPlanRequest {
+  departure_city?: string
   city: string
   start_date: string
   days: number
@@ -80,4 +81,34 @@ export interface TripPlan {
   budget: Budget
   overall_suggestion: string
   requirement_summary?: RequirementSummary
+  transport_summary?: TransportSummary
+}
+
+export interface TransportOption {
+  mode: string
+  title: string
+  description: string
+  estimated_duration: string
+  estimated_cost: string
+  booking_advice: string
+}
+
+export interface TransportSummary {
+  departure_city?: string | null
+  destination_city: string
+  recommended_mode: string
+  summary: string
+  options: TransportOption[]
+}
+
+export interface SavedTripPlan {
+  id: string
+  title: string
+  city: string
+  start_date: string
+  days_count: number
+  budget_total: number
+  saved_at: string
+  updated_at: string
+  trip_plan: TripPlan
 }

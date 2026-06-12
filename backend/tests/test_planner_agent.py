@@ -160,7 +160,9 @@ def test_planner_passes_successful_agent_outputs_to_generator(monkeypatch) -> No
         "poi_candidates": attraction_result.candidates,
         "weather_snapshot": weather_result.snapshot,
         "hotel_candidates": hotel_result.candidates,
+        "transport_summary": captured_generation_inputs["transport_summary"],
     }
+    assert captured_generation_inputs["transport_summary"].recommended_mode == "市内交通"
 
 
 def test_planner_falls_back_to_mock_plan_when_generation_fails(monkeypatch) -> None:

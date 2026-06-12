@@ -8,6 +8,7 @@ from app.services.poi_service import (
 from app.services.weather_service import (
     format_weather_for_prompt,
 )
+from app.services.transport_service import format_transport_for_prompt
 
 
 def build_trip_prompt(context: PlanningContext) -> str:
@@ -20,12 +21,15 @@ def build_trip_prompt(context: PlanningContext) -> str:
         else "暂无实时天气参考，可根据常识生成天气建议。"
     )
     hotel_context = format_hotel_candidates_for_prompt(context.hotel_candidates)
+    transport_context = format_transport_for_prompt(context.transport_summary)
     requirements = request.requirements.strip() if request.requirements else "无"
+    departure_city = request.departure_city.strip() if request.departure_city else "未提供"
 
     return f"""
 你是一名智能旅行规划助手。请根据用户需求生成一份实用、可执行的旅行计划。
 
 用户需求：
+- 出发城市：{departure_city}
 - 目的地城市：{request.city}
 - 出发日期：{request.start_date}
 - 游玩天数：{request.days}
@@ -46,6 +50,9 @@ def build_trip_prompt(context: PlanningContext) -> str:
 已查询到的酒店候选：
 {hotel_context}
 
+交通建议参考：
+{transport_context}
+
 生成规则：
 - 只返回 JSON，不要返回 Markdown，不要返回解释说明。
 - `days` 数组必须刚好包含 {request.days} 天。
@@ -62,6 +69,7 @@ def build_trip_prompt(context: PlanningContext) -> str:
 - 如果结构化需求中包含餐饮偏好，餐饮建议必须明显体现这些偏好。
 - 每一天的 `meals` 必须包含早餐、午餐、晚餐三项建议，格式使用“早餐：...”“午餐：...”“晚餐：...”。
 - 如果结构化需求中包含住宿偏好，酒店推荐理由必须解释如何满足这些偏好。
+- 如果交通建议参考中包含推荐方式，整体建议需要说明出发到目的地的推荐交通方式。
 - 景点名称、地址、餐饮建议、酒店名称、预算数字要尽量真实合理。
 - 经度纬度可以使用近似值，但优先使用候选中给出的真实坐标。
 - 如果不知道可靠图片地址，`image_url` 返回空字符串。
@@ -115,6 +123,22 @@ def build_trip_prompt(context: PlanningContext) -> str:
     "total_meals": 600,
     "total_transportation": 300,
     "total": 2000
+  }},
+  "transport_summary": {{
+    "departure_city": "{departure_city}",
+    "destination_city": "{request.city}",
+    "recommended_mode": "高铁",
+    "summary": "交通建议摘要",
+    "options": [
+      {{
+        "mode": "高铁",
+        "title": "推荐方案标题",
+        "description": "方案说明",
+        "estimated_duration": "约 1-2 小时",
+        "estimated_cost": "约 50-200 元/人",
+        "booking_advice": "订票建议"
+      }}
+    ]
   }},
   "overall_suggestion": "整体旅行建议"
 }}

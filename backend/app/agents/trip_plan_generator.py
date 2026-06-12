@@ -1,7 +1,7 @@
 from app.agents.prompt_builder import build_trip_prompt
 from app.agents.requirement_schemas import RequirementAgentResult
 from app.agents.schemas import PlanningContext
-from app.models.trip import TripPlan, TripPlanRequest
+from app.models.trip import TransportSummary, TripPlan, TripPlanRequest
 from app.services.hotel_service import HotelCandidate
 from app.services.llm_client import call_deepseek
 from app.services.poi_service import PoiCandidate
@@ -23,6 +23,7 @@ class TripPlanGenerator:
         poi_candidates: list[PoiCandidate],
         weather_snapshot: WeatherSnapshot | None,
         hotel_candidates: list[HotelCandidate],
+        transport_summary: TransportSummary | None,
     ) -> TripPlan:
         context = PlanningContext(
             request=request,
@@ -30,8 +31,14 @@ class TripPlanGenerator:
             poi_candidates=poi_candidates,
             weather_snapshot=weather_snapshot,
             hotel_candidates=hotel_candidates,
+            transport_summary=transport_summary,
         )
         prompt = build_trip_prompt(context)
         content = call_deepseek(prompt)
         trip_plan = parse_llm_trip_plan(content)
-        return normalize_trip_plan(trip_plan, request, hotel_candidates)
+        return normalize_trip_plan(
+            trip_plan,
+            request,
+            hotel_candidates,
+            transport_summary=transport_summary,
+        )

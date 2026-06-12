@@ -7,6 +7,7 @@ import type { TripPlanRequest } from '../types/trip'
 const preferences = ['自然风光', '历史人文', '美食探索', '亲子轻松', '网红打卡']
 
 const form = reactive({
+  departureCity: '',
   city: '',
   startDate: '',
   days: 3,
@@ -26,6 +27,7 @@ const handleSubmit = async () => {
 
   try {
     const request: TripPlanRequest = {
+      departure_city: form.departureCity.trim() || undefined,
       city: form.city,
       start_date: form.startDate,
       days: form.days,
@@ -37,6 +39,7 @@ const handleSubmit = async () => {
 
     const response = await generateTripPlan(request)
     sessionStorage.setItem('tripPlan', JSON.stringify(response))
+    sessionStorage.removeItem('savedTripId')
     router.push('/result')
   } catch {
     errorMessage.value = '生成旅行计划时发生错误，请稍后重试。'
@@ -53,6 +56,7 @@ const handleSubmit = async () => {
         <span class="brand-mark">旅</span>
         <span class="brand-name">AI Travel Assistant</span>
       </a>
+      <RouterLink class="history-link" to="/my-trips">我的行程</RouterLink>
 
       <div class="hero-copy">
         <p class="brand-en">Plan with real context</p>
@@ -90,10 +94,17 @@ const handleSubmit = async () => {
       </div>
 
       <form class="trip-form" @submit.prevent="handleSubmit">
-        <label class="field destination-field">
-          <span>目的地城市</span>
-          <input v-model.trim="form.city" type="text" placeholder="想去哪里？例如：杭州" required />
-        </label>
+        <div class="city-grid">
+          <label class="field">
+            <span>出发城市</span>
+            <input v-model.trim="form.departureCity" type="text" placeholder="从哪里出发？例如：上海" />
+          </label>
+
+          <label class="field">
+            <span>目的地城市</span>
+            <input v-model.trim="form.city" type="text" placeholder="想去哪里？例如：杭州" required />
+          </label>
+        </div>
 
         <fieldset class="field-group">
           <legend>行程参数</legend>
@@ -236,6 +247,24 @@ const handleSubmit = async () => {
   align-items: center;
   color: #ffffff;
   text-decoration: none;
+}
+
+.history-link {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 14px;
+  color: #ffffff;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .brand-mark {
@@ -435,6 +464,13 @@ h2 {
   gap: 14px;
 }
 
+.city-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
 .field-group {
   display: grid;
   gap: 12px;
@@ -465,26 +501,6 @@ h2 {
   color: var(--text);
   font-size: 15px;
   font-weight: 700;
-}
-
-.destination-field {
-  gap: 10px;
-  padding: 14px;
-  background: linear-gradient(180deg, #fffaf0, #ffffff);
-  border: 1px solid rgba(216, 139, 45, 0.22);
-  border-radius: 8px;
-}
-
-.destination-field > span {
-  color: var(--primary-dark);
-}
-
-.destination-field input {
-  min-height: 56px;
-  background: #ffffff;
-  border-color: rgba(23, 107, 93, 0.16);
-  font-size: 17px;
-  font-weight: 800;
 }
 
 input,
@@ -769,6 +785,10 @@ textarea {
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .city-grid {
     grid-template-columns: 1fr;
   }
 

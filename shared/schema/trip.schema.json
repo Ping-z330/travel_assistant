@@ -4,6 +4,19 @@
   "models": {
     "TripPlanRequest": {
       "properties": {
+        "departure_city": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "出发城市",
+          "title": "Departure City"
+        },
         "city": {
           "description": "目的地城市",
           "title": "City",
@@ -349,6 +362,87 @@
           "title": "RequirementSummary",
           "type": "object"
         },
+        "TransportOption": {
+          "properties": {
+            "mode": {
+              "title": "Mode",
+              "type": "string"
+            },
+            "title": {
+              "title": "Title",
+              "type": "string"
+            },
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "estimated_duration": {
+              "title": "Estimated Duration",
+              "type": "string"
+            },
+            "estimated_cost": {
+              "title": "Estimated Cost",
+              "type": "string"
+            },
+            "booking_advice": {
+              "title": "Booking Advice",
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode",
+            "title",
+            "description",
+            "estimated_duration",
+            "estimated_cost",
+            "booking_advice"
+          ],
+          "title": "TransportOption",
+          "type": "object"
+        },
+        "TransportSummary": {
+          "properties": {
+            "departure_city": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Departure City"
+            },
+            "destination_city": {
+              "title": "Destination City",
+              "type": "string"
+            },
+            "recommended_mode": {
+              "title": "Recommended Mode",
+              "type": "string"
+            },
+            "summary": {
+              "title": "Summary",
+              "type": "string"
+            },
+            "options": {
+              "items": {
+                "$ref": "#/$defs/TransportOption"
+              },
+              "title": "Options",
+              "type": "array"
+            }
+          },
+          "required": [
+            "destination_city",
+            "recommended_mode",
+            "summary",
+            "options"
+          ],
+          "title": "TransportSummary",
+          "type": "object"
+        },
         "WeatherInfo": {
           "properties": {
             "date": {
@@ -405,6 +499,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/RequirementSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "transport_summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransportSummary"
             },
             {
               "type": "null"

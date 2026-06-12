@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class TripPlanRequest(BaseModel):
+    departure_city: Optional[str] = Field(None, description="出发城市")
     city: str = Field(..., description="目的地城市")
     start_date: str = Field(..., description="出发日期")
     days: int = Field(..., ge=1, le=15, description="游玩天数")
@@ -78,6 +79,23 @@ class RequirementSummary(BaseModel):
     must_avoid: List[str] = []
 
 
+class TransportOption(BaseModel):
+    mode: str
+    title: str
+    description: str
+    estimated_duration: str
+    estimated_cost: str
+    booking_advice: str
+
+
+class TransportSummary(BaseModel):
+    departure_city: Optional[str] = None
+    destination_city: str
+    recommended_mode: str
+    summary: str
+    options: List[TransportOption]
+
+
 class TripPlan(BaseModel):
     city: str
     start_date: str
@@ -85,3 +103,4 @@ class TripPlan(BaseModel):
     budget: Budget
     overall_suggestion: str
     requirement_summary: Optional[RequirementSummary] = None
+    transport_summary: Optional[TransportSummary] = None
