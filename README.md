@@ -16,7 +16,95 @@
 - 已加入后端 `pytest` 与前端 `Vitest` 回归测试
 - 支持导出前后端共享 JSON Schema 数据契约
 
+## 界面截图
+
+### 首页
+
+![首页](images/首页.png)
+
+### 概览页
+
+![概览页](images/概览页.png)
+
+### 详情页
+
+![详情页](images/详情页.png)
+
 ## 当前架构
+
+### 流程图
+
+```mermaid
+flowchart TD
+    A[用户提交 TripPlanRequest] --> B[trip_plan_service.generate_trip_plan]
+    B --> C{TRIP_PLAN_MODE}
+
+    C -->|mock| D[build_mock_trip_plan]
+    D --> E[返回 TripPlan]
+
+    C -->|llm| F[PlannerAgent.run]
+    F --> G[RequirementAgent 解析约束]
+    F --> H[并行调用 AttractionAgent / WeatherAgent / HotelAgent]
+    H --> I[TripPlanGenerator]
+    I --> J[PlanningContext]
+    J --> K[PromptBuilder 组装 Prompt]
+    K --> L[call_deepseek]
+    L --> M[parse_llm_trip_plan]
+    M --> N[normalize_trip_plan]
+    N --> E
+
+    L --> O[异常或返回不合法]
+    M --> O
+    N --> O
+    O --> D
+```
+
+### 功能模块图
+
+```mermaid
+flowchart LR
+    subgraph Frontend[前端]
+        F1[TripForm]
+        F2[ResultView]
+        F3[TravelMapPreview]
+    end
+
+    subgraph Backend[后端]
+        B1[trip API]
+        B2[trip_plan_service]
+        B3[PlannerAgent]
+        B4[RequirementAgent]
+        B5[AttractionAgent]
+        B6[WeatherAgent]
+        B7[HotelAgent]
+        B8[TripPlanGenerator]
+        B9[PromptBuilder]
+        B10[trip_plan_postprocessor]
+    end
+
+    subgraph Services[外部与数据层]
+        S1[DeepSeek]
+        S2[高德 POI / 天气 / 酒店]
+        S3[Pexels]
+        S4[shared/schema/trip.schema.json]
+    end
+
+    F1 --> B1 --> B2 --> B3
+    B3 --> B4
+    B3 --> B5
+    B3 --> B6
+    B3 --> B7
+    B3 --> B8
+    B8 --> B9 --> S1
+    B5 --> S2
+    B6 --> S2
+    B7 --> S2
+    B3 --> B10
+    B10 --> S3
+    B2 --> S4
+    B1 --> F2
+    B1 --> F3
+```
 
 ### 后端核心链路
 
