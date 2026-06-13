@@ -10,6 +10,7 @@
 - 支持动态城市解析，不依赖固定城市映射表
 - 支持地图展示、酒店点位展示与按天路线区分
 - 支持 PDF 导出
+- 支持登录页、受保护规划路由、共享顶部导航和本地“我的行程”
 - 已完成第一版多智能体协作架构
 - 已加入日志、重试、并行和缓存优化
 - 已完成 Agent 编排、生成和需求解析的结构化拆分
@@ -18,13 +19,21 @@
 
 ## 界面截图
 
-### 首页
+### 登录页
 
-![首页](images/首页.png)
+![登录页](images/登录页.png)
 
-### 概览页
+### 规划页
 
-![概览页](images/概览页.png)
+![规划页](images/规划页.png)
+
+### 行程概览页
+
+![行程概览页](images/行程概览页.png)
+
+### 历史记录页
+
+![历史记录页](images/历史记录页.png)
 
 ### 详情页
 
@@ -64,12 +73,14 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph Frontend[前端]
+        F0[LoginView / AppNav]
         F1[TripForm]
-        F2[ResultView]
+        F2[ResultView / MyTripsView]
         F3[TravelMapPreview]
     end
 
     subgraph Backend[后端]
+        B0[auth API]
         B1[trip API]
         B2[trip_plan_service]
         B3[PlannerAgent]
@@ -89,6 +100,7 @@ flowchart LR
         S4[shared/schema/trip.schema.json]
     end
 
+    F0 --> B0
     F1 --> B1 --> B2 --> B3
     B3 --> B4
     B3 --> B5
@@ -147,7 +159,14 @@ flowchart LR
 
 ## 功能概览
 
-### 1. 行程生成
+### 1. 登录与页面导航
+
+- 入口 `/` 是登录页，默认账号为 `demo / travel123`
+- 登录成功后进入 `/plan` 填写旅行需求
+- `/plan`、`/result`、`/my-trips` 都需要登录后访问
+- 登录后页面共享顶部导航，提供“规划行程”“我的行程”和退出登录入口
+
+### 2. 行程生成
 
 - 输入城市、日期、天数、预算、人数和偏好
 - 自动生成多天结构化行程
@@ -157,22 +176,25 @@ flowchart LR
   - 餐饮建议
   - 天气信息
 
-### 2. 真实数据增强
+### 3. 真实数据增强
 
 - 景点：高德 POI 搜索 + 清洗去重
 - 天气：高德天气查询
 - 酒店：高德酒店候选搜索 + 坐标
 - 图片：Pexels 搜图
 
-### 3. 地图展示
+### 4. 地图展示
 
 - 景点按天使用不同颜色显示
 - 每天路线单独绘制
 - 酒店使用独立图标显示
 - 连续多天入住同一家酒店时自动合并点位
 
-### 4. PDF 导出
+### 5. 结果管理与 PDF 导出
 
+- 结果页支持编辑当前行程并重新计算预算
+- 结果页支持保存到“我的行程”
+- “我的行程”使用浏览器本地存储保存用户手动确认过的行程
 - 结果页支持一键导出 PDF
 - 基于 `html2canvas + jsPDF`
 
@@ -192,12 +214,15 @@ travel-assistant/
 │  │  │  ├─ prompt_builder.py
 │  │  │  └─ schemas.py
 │  │  ├─ api/
+│  │  │  ├─ auth.py
 │  │  │  ├─ trip.py
 │  │  │  └─ trip_debug.py
 │  │  ├─ models/
+│  │  │  ├─ auth.py
 │  │  │  └─ trip.py
 │  │  └─ services/
 │  │     ├─ amap_client.py
+│  │     ├─ auth_service.py
 │  │     ├─ poi_service.py
 │  │     ├─ weather_service.py
 │  │     ├─ hotel_service.py
@@ -216,6 +241,7 @@ travel-assistant/
 │  ├─ src/components/
 │  ├─ src/services/
 │  ├─ src/types/
+│  ├─ src/router/
 │  └─ src/views/
 ├─ docs/
 │  └─ agent-architecture.md
@@ -266,6 +292,11 @@ DEEPSEEK_API_KEY=your_deepseek_key
 DEEPSEEK_MODEL=deepseek-v4-flash
 AMAP_WEB_API_KEY=your_amap_webservice_key
 PEXELS_API_KEY=your_pexels_api_key
+TRAVEL_ASSISTANT_AUTH_USERNAME=demo
+TRAVEL_ASSISTANT_AUTH_PASSWORD=travel123
+TRAVEL_ASSISTANT_AUTH_DISPLAY_NAME=旅行助手用户
+TRAVEL_ASSISTANT_AUTH_SECRET=replace_with_a_local_secret
+TRAVEL_ASSISTANT_AUTH_TTL_DAYS=7
 ```
 
 ### 前端 `frontend/.env.local`
@@ -337,6 +368,10 @@ cd e:\Ai_Project\travel-assistant\backend
 
 ### 正式接口
 
+- `POST /api/auth/login`
+  登录并返回 bearer token
+- `GET /api/auth/me`
+  校验当前 bearer token 并返回当前用户
 - `POST /api/trip/plan`
   生成正式旅行计划
 
@@ -376,6 +411,7 @@ cd e:\Ai_Project\travel-assistant\backend
 
 结果页当前包含：
 
+- 顶部结果信息与操作工具栏
 - 行程概览
 - 预算摘要
 - 地图展示
@@ -384,6 +420,8 @@ cd e:\Ai_Project\travel-assistant\backend
 - 酒店推荐
 - 餐饮建议
 - 景点图片
+- 编辑行程
+- 保存到我的行程
 - PDF 导出
 
 ## 多智能体工作方式
@@ -413,6 +451,7 @@ cd e:\Ai_Project\travel-assistant\backend
 当前版本包含以下自动化测试：
 
 - 后端 `pytest`
+  - 登录账号校验、bearer token 签发与 `/api/auth/me` 校验
   - `TripPlan` 解析、标准化、兜底补齐
   - 高德 Adapter 错误语义
   - POI / 酒店 / 天气数据整理
@@ -420,6 +459,8 @@ cd e:\Ai_Project\travel-assistant\backend
   - PromptBuilder 与 RequirementAgent 结构化约束解析
   - TTL 缓存过期与容量控制
 - 前端 `Vitest`
+  - 登录状态持久化、当前用户刷新和退出登录清理
+  - 我的行程本地保存、更新、查询和删除
   - 地图路线数据投影
   - 连续住宿点位合并
   - 无坐标住宿点跳过

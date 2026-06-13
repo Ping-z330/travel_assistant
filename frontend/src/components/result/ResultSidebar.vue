@@ -13,8 +13,6 @@ const emit = defineEmits<{
 
 <template>
   <aside class="result-sidebar" aria-label="行程导航">
-    <p class="sidebar-title">行程目录</p>
-
     <button
       class="sidebar-item sidebar-item--overview"
       :class="{ active: activeSection === 'overview' }"
@@ -45,14 +43,6 @@ const emit = defineEmits<{
   display: grid;
   gap: 9px;
   align-self: start;
-}
-
-.sidebar-title {
-  margin: 0 0 4px;
-  color: var(--primary-dark);
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
 }
 
 .sidebar-item {
@@ -114,10 +104,6 @@ const emit = defineEmits<{
     grid-auto-columns: minmax(190px, 1fr);
     overflow-x: auto;
     padding-bottom: 4px;
-  }
-
-  .sidebar-title {
-    display: none;
   }
 }
 </style>

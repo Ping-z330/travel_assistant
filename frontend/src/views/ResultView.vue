@@ -47,7 +47,7 @@ const updateSavedTripId = (id: string) => {
 
 <style scoped>
 .empty-result {
-  min-height: 100vh;
+  min-height: calc(100vh - 68px);
   display: grid;
   place-items: center;
   background: var(--bg);

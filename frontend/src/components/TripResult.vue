@@ -71,7 +71,7 @@ const visibleDays = computed(() => {
 })
 
 const backToForm = () => {
-  router.push('/')
+  router.push('/plan')
 }
 
 const startEditing = () => {
@@ -165,7 +165,7 @@ const exportToPdf = async () => {
 <template>
   <section class="trip-result">
     <header class="result-nav">
-      <div>
+      <div class="result-title">
         <p class="nav-eyebrow">AI Travel Plan</p>
         <strong>{{ activeTripPlan.city }} {{ activeTripPlan.days.length }} 日旅行计划</strong>
         <span class="nav-meta">
@@ -175,25 +175,30 @@ const exportToPdf = async () => {
       </div>
 
       <div class="result-actions">
-        <button class="back-button" type="button" @click="backToForm">返回修改</button>
-        <button
-          v-if="!isEditing"
-          class="edit-button"
-          type="button"
-          @click="startEditing"
-        >
-          编辑行程
-        </button>
-        <template v-else>
-          <button class="back-button" type="button" @click="cancelEditing">取消编辑</button>
-          <button class="save-button" type="button" @click="saveEditing">保存修改</button>
-        </template>
-        <button v-if="!isEditing" class="history-button" type="button" @click="saveToHistory">
-          {{ historyButtonLabel }}
-        </button>
-        <button class="export-button" type="button" :disabled="exporting" @click="exportToPdf">
-          {{ exporting ? '正在整理 PDF...' : '导出 PDF' }}
-        </button>
+        <div class="action-group">
+          <button class="back-button" type="button" @click="backToForm">返回修改</button>
+          <button
+            v-if="!isEditing"
+            class="edit-button"
+            type="button"
+            @click="startEditing"
+          >
+            编辑行程
+          </button>
+          <template v-else>
+            <button class="back-button" type="button" @click="cancelEditing">取消编辑</button>
+            <button class="save-button" type="button" @click="saveEditing">保存修改</button>
+          </template>
+        </div>
+
+        <div class="action-group action-group--primary">
+          <button v-if="!isEditing" class="history-button" type="button" @click="saveToHistory">
+            {{ historyButtonLabel }}
+          </button>
+          <button class="export-button" type="button" :disabled="exporting" @click="exportToPdf">
+            {{ exporting ? '正在整理 PDF...' : '导出 PDF' }}
+          </button>
+        </div>
       </div>
     </header>
 
@@ -243,8 +248,8 @@ const exportToPdf = async () => {
 
 <style scoped>
 .trip-result {
-  min-height: 100vh;
-  padding: 28px 20px 56px;
+  min-height: calc(100vh - 68px);
+  padding: 44px 20px 56px;
   background:
     linear-gradient(180deg, rgba(23, 107, 93, 0.14), transparent 320px),
     var(--bg);
@@ -254,9 +259,21 @@ const exportToPdf = async () => {
   width: min(1240px, 100%);
   margin: 0 auto 28px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
-  gap: 18px;
+  gap: 24px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(23, 107, 93, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(31, 48, 39, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.result-title {
+  display: grid;
+  align-content: center;
+  min-width: 260px;
 }
 
 .result-nav strong {
@@ -298,9 +315,28 @@ const exportToPdf = async () => {
 
 .result-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: min(100%, 440px);
+}
+
+.action-group {
+  display: inline-flex;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  padding: 4px;
+  background: rgba(23, 107, 93, 0.045);
+  border: 1px solid rgba(23, 107, 93, 0.08);
+  border-radius: 8px;
+}
+
+.action-group--primary {
+  background: transparent;
+  border-color: transparent;
 }
 
 .result-shell {
@@ -336,7 +372,7 @@ const exportToPdf = async () => {
   min-height: 42px;
   padding: 0 18px;
   color: var(--primary-dark);
-  background: rgba(255, 255, 255, 0.78);
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 6px;
   font-weight: 800;
@@ -366,8 +402,8 @@ const exportToPdf = async () => {
 
 .edit-button {
   color: var(--primary-dark);
-  background: #fff8ec;
-  border: 1px solid rgba(216, 139, 45, 0.38);
+  background: #ffffff;
+  border: 1px solid var(--line);
 }
 
 .save-button {
@@ -378,7 +414,7 @@ const exportToPdf = async () => {
 
 .history-button {
   color: var(--primary-dark);
-  background: var(--soft);
+  background: #edf5ef;
   border: 1px solid rgba(23, 107, 93, 0.18);
 }
 
@@ -425,7 +461,7 @@ const exportToPdf = async () => {
 
 @media (max-width: 560px) {
   .trip-result {
-    padding: 18px 14px 38px;
+    padding: 24px 14px 38px;
   }
 
   .result-nav {
@@ -434,6 +470,11 @@ const exportToPdf = async () => {
   }
 
   .result-actions {
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .action-group {
     justify-content: flex-start;
   }
 

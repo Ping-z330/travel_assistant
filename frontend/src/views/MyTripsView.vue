@@ -32,8 +32,9 @@ const removeTrip = (id: string) => {
 }
 
 const backHome = () => {
-  router.push('/')
+  router.push('/plan')
 }
+
 </script>
 
 <template>
@@ -79,8 +80,8 @@ const backHome = () => {
 
 <style scoped>
 .my-trips-page {
-  min-height: 100vh;
-  padding: 34px 20px 56px;
+  min-height: calc(100vh - 68px);
+  padding: 44px 20px 56px;
   background:
     linear-gradient(180deg, rgba(23, 107, 93, 0.14), transparent 320px),
     var(--bg);
@@ -223,6 +224,10 @@ const backHome = () => {
 }
 
 @media (max-width: 720px) {
+  .my-trips-page {
+    padding-top: 24px;
+  }
+
   .my-trips-header,
   .trip-card {
     grid-template-columns: 1fr;

@@ -54,6 +54,14 @@ TripPlanRequest
 - `TripPlanGenerator` 负责 prompt 组装、LLM 调用和结果标准化。
 - `RequirementAgent` 负责把补充需求解析成更稳定的结构化约束。
 
+前端也已经从单页填写表单演进为登录后工作台：
+
+- `/` 是登录页。
+- `/plan` 是旅行规划表单页。
+- `/result` 是旅行计划结果页，支持编辑、保存到我的行程和 PDF 导出。
+- `/my-trips` 是浏览器本地保存的行程列表。
+- 登录后页面共享顶部导航，未登录访问受保护页面会回到登录页。
+
 这些实现细节的说明见仓库根目录的 [README.md](README.md) 和 [docs/agent-architecture.md](docs/agent-architecture.md)。
 
 ## 阶段一：假数据 MVP

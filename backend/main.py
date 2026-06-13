@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import router as auth_router
 from app.api.trip import router as trip_router
 from app.api.trip_debug import router as trip_debug_router
 
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(trip_router)
+app.include_router(auth_router)
 app.include_router(trip_debug_router)
 
 
